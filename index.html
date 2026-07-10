@@ -7,6 +7,8 @@
   Target: GitHub Pages hosting + Confluence iframe embed.
 
   CHANGELOG
+  v2.9.13 — Added a "How to read this tab" help guide at the top of the Legend tab explaining the highlight convention: bright/full-colour entries actually occurred in the loaded capture (what matters now), dimmed "(not in this capture)" entries are reference-only and can be ignored for this file.
+  v2.9.12 — Made the primary actions prominent: "Copy summary" is now a filled teal (signal) button and "New file" a filled blue (accent) button, standing out from the ghost-style controls. All button text meets WCAG AA in both modes.
   v2.9.11 — Call-flow lifelines now labeled: each IP column shows its role (client UA / proxy / registrar / internal node / endpoint) and public/private, plus the SIP domain when the packets carry one (e.g. registrar → snt-mt1.voip.chi.snetcom.net with platform type). No DNS is invented — labels come from the SIP headers and role inference.
   v2.9.10 — Added a note under the Call flow ladder explaining it shows SIP signaling only; Operations Monitor traces contain no DNS lookups or RTP audio, so those steps never appear even on a healthy call (addresses shown are already-resolved SIP endpoints).
   v2.9.9  — LinkedIn credit now uses the official LinkedIn brand blue (#0A66C2) for the icon and name in light mode, and a lightened LinkedIn blue (#4DA0E8) in dark mode for legibility.
@@ -197,6 +199,13 @@
   .btn:active{transform:translateY(1px)}
   .btn.ghost{background:transparent;color:var(--text);border-color:var(--line)}
   .btn.ghost:hover{border-color:var(--muted)}
+  /* Prominent filled variants for primary actions */
+  .btn.accent{background:var(--signal);border-color:var(--signal);color:#fff;box-shadow:0 1px 2px rgba(14,122,95,.25)}
+  .btn.accent:hover{opacity:1;filter:brightness(1.06)}
+  html[data-theme="dark"] .btn.accent{background:var(--signal);border-color:var(--signal);color:#08312a}
+  .btn.primary{background:var(--violet);border-color:var(--violet);color:#fff;box-shadow:0 1px 2px rgba(65,107,169,.25)}
+  .btn.primary:hover{opacity:1;filter:brightness(1.06)}
+  html[data-theme="dark"] .btn.primary{background:var(--violet);border-color:var(--violet);color:#08243f}
   .btn.small{padding:6px 12px;font-size:12.5px;border-radius:7px}
   .hint{font-family:var(--mono);font-size:11.5px;color:var(--faint);margin-top:14px}
   .err{
@@ -319,6 +328,16 @@
   /* Status legend ----------------------------------------------------- */
   .legend{background:var(--paper);border:1px solid var(--line);border-radius:12px;
     padding:14px 16px;margin-bottom:14px;box-shadow:var(--shadow)}
+  .legend.guide{border-left:4px solid var(--signal)}
+  .legend .gtext{font-size:13px;line-height:1.6;color:var(--muted)}
+  .legend .gtext p{margin:0 0 10px}
+  .legend .gtext b{color:var(--text)}
+  .legend .gtip{background:var(--ink-2);border-radius:8px;padding:9px 12px;color:var(--muted)}
+  .legend .gkey{display:flex;flex-direction:column;gap:8px;margin:0 0 10px}
+  .legend .gk{display:flex;gap:10px;align-items:flex-start;font-size:12.5px;line-height:1.5}
+  .legend .gk-sw{flex:0 0 auto;width:26px;height:18px;border-radius:5px;margin-top:1px;border:1px solid var(--line)}
+  .legend .gk-sw.on{background:var(--signal);border-color:var(--signal)}
+  .legend .gk-sw.off{background:var(--ink-2);opacity:.5}
   .legend .lt{font-size:11px;font-weight:800;letter-spacing:.08em;color:var(--faint);
     text-transform:uppercase;margin-bottom:10px}
   .legend .lgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px 18px}
@@ -566,7 +585,7 @@
     <div class="spacer"></div>
     <span class="privacy" title="Files are parsed in your browser and never uploaded"><span class="dot"></span>parsed locally</span>
     <button class="themebtn" id="themeToggle" title="Toggle dark / light mode" aria-label="Toggle theme"><span id="themeIcon">◐</span><span id="themeLabel">Dark</span></button>
-      <span class="ver">v2.9.11</span>
+      <span class="ver">v2.9.13</span>
   </div>
 </header>
 
@@ -595,8 +614,8 @@
         <div class="fmeta" id="fMeta">—</div>
       </div>
       <div class="spacer"></div>
-      <button class="btn ghost small" id="copySummary">Copy summary</button>
-      <button class="btn ghost small" id="newFile">New file</button>
+      <button class="btn accent small" id="copySummary">Copy summary</button>
+      <button class="btn primary small" id="newFile">New file</button>
     </div>
 
     <div class="cards" id="cards"></div>
@@ -667,7 +686,7 @@
 </aside>
 
 <footer class="app">
-  <div class="wrap">COEO AI Enablement<span class="fdot"></span>PCAP SIP Analyzer v2.9.11 — offline, in-browser SIP capture analysis</div>
+  <div class="wrap">COEO AI Enablement<span class="fdot"></span>PCAP SIP Analyzer v2.9.13 — offline, in-browser SIP capture analysis</div>
   <div class="wrap credit">Created by
     <a class="author" href="https://www.linkedin.com/in/ronmangune/" target="_blank" rel="noopener noreferrer" title="Ron Mangune on LinkedIn">
       Ron Mangune
@@ -1995,6 +2014,18 @@ const PSA = (function(){
 
     const row=(it)=>`<div class="li${present.has(it.id)?'':' dim'}"><span class="lpill ${it.cls}">${it.pill}</span><span>${it.txt}${present.has(it.id)?'':' <i>(not in this capture)</i>'}</span></div>`;
     const crow=(it)=>`<div class="li${presentCodes.has(it.id)?'':' dim'}"><span class="lcode ${it.cls}">${it.code}</span><span>${it.txt}${presentCodes.has(it.id)?'':' <i>(not in this capture)</i>'}</span></div>`;
+
+    const guide=el('div','legend guide');
+    guide.innerHTML=`<div class="lt">🧭 How to read this tab</div>
+      <div class="gtext">
+        <p>This is a reference for <b>every status and reason</b> the analyzer can report. To help you focus, entries are shown two ways:</p>
+        <div class="gkey">
+          <div class="gk"><span class="gk-sw on"></span><div><b>Highlighted (full colour)</b> — this status or reason <b>actually appears in the capture you just loaded</b>. These are what matter right now — start here when triaging this file.</div></div>
+          <div class="gk"><span class="gk-sw off"></span><div><b>Dimmed &amp; marked “(not in this capture)”</b> — the analyzer <i>can</i> report it, but it <b>didn’t occur in this file</b>. Nothing to act on; it’s here so you learn the full vocabulary and recognise it next time.</div></div>
+        </div>
+        <p class="gtip">Rule of thumb: <b>if it’s bright, it happened — look at it. If it’s greyed out, it didn’t — you can ignore it for this capture.</b> The dimmed items aren’t errors or missing data; they simply weren’t part of this conversation.</p>
+      </div>`;
+    host.appendChild(guide);
 
     const regCard=el('div','legend');
     regCard.innerHTML=`<div class="lt">📶 Registration statuses — did the device sign in?</div>
