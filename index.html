@@ -7,6 +7,7 @@
   Target: GitHub Pages hosting + Confluence iframe embed.
 
   CHANGELOG
+  v2.9.16 — Light mode is now the default; the tool no longer follows the OS prefers-color-scheme. Dark mode is used only if the user explicitly toggled to it before (their choice is still remembered).
   v2.9.15 — New empty-state waveform: a traveling audio-packet burst (gaussian envelope over a speech-like carrier) with a soft glow, grid ticks, and a leading dot. Fully theme-aware — the scope canvas, trace, and grid all read from the CLIR tokens, so it is a teal trace on a light card in light mode and a bright teal trace on the dark card in dark mode.
   v2.9.14 — Fixed the empty-state scope waveform not animating: it was suppressed under prefers-reduced-motion and its dark canvas/line colors had gone stale after the palette change. The gentle decorative waveform now animates for everyone, uses a fixed dark scope with a teal trace visible in both modes, and restarts when returning to the upload screen via New file.
   v2.9.13 — Added a "How to read this tab" help guide at the top of the Legend tab explaining the highlight convention: bright/full-colour entries actually occurred in the loaded capture (what matters now), dimmed "(not in this capture)" entries are reference-only and can be ignored for this file.
@@ -587,7 +588,7 @@
     <div class="spacer"></div>
     <span class="privacy" title="Files are parsed in your browser and never uploaded"><span class="dot"></span>parsed locally</span>
     <button class="themebtn" id="themeToggle" title="Toggle dark / light mode" aria-label="Toggle theme"><span id="themeIcon">◐</span><span id="themeLabel">Dark</span></button>
-      <span class="ver">v2.9.15</span>
+      <span class="ver">v2.9.16</span>
   </div>
 </header>
 
@@ -688,7 +689,7 @@
 </aside>
 
 <footer class="app">
-  <div class="wrap">COEO AI Enablement<span class="fdot"></span>PCAP SIP Analyzer v2.9.15 — offline, in-browser SIP capture analysis</div>
+  <div class="wrap">COEO AI Enablement<span class="fdot"></span>PCAP SIP Analyzer v2.9.16 — offline, in-browser SIP capture analysis</div>
   <div class="wrap credit">Created by
     <a class="author" href="https://www.linkedin.com/in/ronmangune/" target="_blank" rel="noopener noreferrer" title="Ron Mangune on LinkedIn">
       Ron Mangune
@@ -702,8 +703,8 @@
 (function(){
   const KEY='psa-theme';
   let saved=null; try{ saved=localStorage.getItem(KEY); }catch(e){}
-  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const theme = saved || (prefersDark ? 'dark' : 'light');
+  // Default to light mode; only use dark if the user explicitly chose it before.
+  const theme = (saved==='dark' || saved==='light') ? saved : 'light';
   document.documentElement.setAttribute('data-theme', theme);
   window.__setTheme = t => {
     document.documentElement.setAttribute('data-theme', t);
