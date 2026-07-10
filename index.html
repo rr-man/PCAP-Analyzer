@@ -7,6 +7,8 @@
   Target: GitHub Pages hosting + Confluence iframe embed.
 
   CHANGELOG
+  v2.9.15 — New empty-state waveform: a traveling audio-packet burst (gaussian envelope over a speech-like carrier) with a soft glow, grid ticks, and a leading dot. Fully theme-aware — the scope canvas, trace, and grid all read from the CLIR tokens, so it is a teal trace on a light card in light mode and a bright teal trace on the dark card in dark mode.
+  v2.9.14 — Fixed the empty-state scope waveform not animating: it was suppressed under prefers-reduced-motion and its dark canvas/line colors had gone stale after the palette change. The gentle decorative waveform now animates for everyone, uses a fixed dark scope with a teal trace visible in both modes, and restarts when returning to the upload screen via New file.
   v2.9.13 — Added a "How to read this tab" help guide at the top of the Legend tab explaining the highlight convention: bright/full-colour entries actually occurred in the loaded capture (what matters now), dimmed "(not in this capture)" entries are reference-only and can be ignored for this file.
   v2.9.12 — Made the primary actions prominent: "Copy summary" is now a filled teal (signal) button and "New file" a filled blue (accent) button, standing out from the ghost-style controls. All button text meets WCAG AA in both modes.
   v2.9.11 — Call-flow lifelines now labeled: each IP column shows its role (client UA / proxy / registrar / internal node / endpoint) and public/private, plus the SIP domain when the packets carry one (e.g. registrar → snt-mt1.voip.chi.snetcom.net with platform type). No DNS is invented — labels come from the SIP headers and role inference.
@@ -186,7 +188,7 @@
   .dropzone.drag{border-color:var(--signal);background:#F3FDFB}
   .dz-scope{
     width:100%;max-width:520px;height:74px;margin:0 auto 18px;display:block;
-    background:var(--ink);border-radius:10px;border:1px solid var(--ink-3);
+    background:var(--paper);border-radius:10px;border:1px solid var(--line);
   }
   .dropzone h1{font-size:20px;margin:6px 0 6px;letter-spacing:-.01em}
   .dropzone p{color:var(--muted);margin:0 auto 18px;max-width:520px;font-size:14px}
@@ -585,7 +587,7 @@
     <div class="spacer"></div>
     <span class="privacy" title="Files are parsed in your browser and never uploaded"><span class="dot"></span>parsed locally</span>
     <button class="themebtn" id="themeToggle" title="Toggle dark / light mode" aria-label="Toggle theme"><span id="themeIcon">◐</span><span id="themeLabel">Dark</span></button>
-      <span class="ver">v2.9.13</span>
+      <span class="ver">v2.9.15</span>
   </div>
 </header>
 
@@ -686,7 +688,7 @@
 </aside>
 
 <footer class="app">
-  <div class="wrap">COEO AI Enablement<span class="fdot"></span>PCAP SIP Analyzer v2.9.13 — offline, in-browser SIP capture analysis</div>
+  <div class="wrap">COEO AI Enablement<span class="fdot"></span>PCAP SIP Analyzer v2.9.15 — offline, in-browser SIP capture analysis</div>
   <div class="wrap credit">Created by
     <a class="author" href="https://www.linkedin.com/in/ronmangune/" target="_blank" rel="noopener noreferrer" title="Ron Mangune on LinkedIn">
       Ron Mangune
@@ -1832,20 +1834,37 @@ const PSA = (function(){
   /* --- scope animation on empty state --- */
   (function scope(){
     const svg=$('#dzScope'); if(!svg) return;
-    const W=520,H=74; let t=0;
+    const W=520,H=74, mid=H/2; let t=0;
+    const cssVar=(n,f)=>{ try{ const v=getComputedStyle(document.documentElement).getPropertyValue(n).trim(); return v||f; }catch(e){ return f; } };
     function frame(){
       if(!$('#empty') || $('#empty').style.display==='none') return; // stop when hidden
-      let d='M0 '+(H/2);
-      for(let x=0;x<=W;x+=8){
-        const y=H/2 + Math.sin((x/34)+t)*10*Math.exp(-Math.abs((x-(t*40)%W))/120) + Math.sin(x/90+t*0.6)*4;
+      const sig = cssVar('--signal', '#4cc9a4');       // trace color follows theme
+      const grid = cssVar('--ink-3', '#2b3742');       // faint grid follows theme
+      // traveling "packet" envelope sweeping left→right, wrapping
+      const head = (t*46) % (W+140) - 70;
+      let d='M0 '+mid.toFixed(1);
+      let dotY=mid;
+      for(let x=0;x<=W;x+=4){
+        // base carrier + speech-like modulation, amplified inside the moving packet window
+        const env = Math.exp(-Math.pow((x-head)/60,2));            // gaussian packet
+        const carrier = Math.sin(x/10 - t*3);
+        const speech  = Math.sin(x/57 + t*0.8)*Math.sin(x/23 - t*1.7);
+        const y = mid - ( carrier*4 + speech*3 )*(0.28 + env*1.0) * (H*0.22)/10;
         d+=' L'+x+' '+y.toFixed(1);
+        if(Math.abs(x-head)<2) dotY=y;
       }
-      svg.innerHTML=`<path d="${d}" fill="none" stroke="#0e7a5f" stroke-width="1.6" opacity="0.9"/>
-        <line x1="0" y1="${H/2}" x2="${W}" y2="${H/2}" stroke="#1B2740" stroke-width="1"/>`;
-      t+=0.08; requestAnimationFrame(frame);
+      // 3 faint vertical grid ticks + baseline
+      let grids=`<line x1="0" y1="${mid}" x2="${W}" y2="${mid}" stroke="${grid}" stroke-width="1" opacity="0.5"/>`;
+      for(let gx=W*0.25; gx<W; gx+=W*0.25) grids+=`<line x1="${gx.toFixed(0)}" y1="8" x2="${gx.toFixed(0)}" y2="${H-8}" stroke="${grid}" stroke-width="1" opacity="0.25"/>`;
+      svg.innerHTML=`${grids}
+        <path d="${d}" fill="none" stroke="${sig}" stroke-width="1.4" opacity="0.35" filter="blur(2px)"/>
+        <path d="${d}" fill="none" stroke="${sig}" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/>
+        <circle cx="${Math.max(0,Math.min(W,head)).toFixed(1)}" cy="${dotY.toFixed(1)}" r="2.6" fill="${sig}"/>`;
+      t+=0.05; requestAnimationFrame(frame);
     }
-    if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches) frame();
-    else svg.innerHTML=`<polyline points="0,37 130,37 160,16 200,58 240,30 300,44 340,20 520,37" fill="none" stroke="#0e7a5f" stroke-width="1.6"/>`;
+    // Gentle decorative waveform; runs regardless of prefers-reduced-motion.
+    if(typeof requestAnimationFrame==='function'){ window.__startScope=frame; frame(); }
+    else svg.innerHTML=`<polyline points="0,37 130,37 160,16 200,58 240,30 300,44 340,20 520,37" fill="none" stroke="${cssVar('--signal','#4cc9a4')}" stroke-width="1.6"/>`;
   })();
 
   /* --- file handling --- */
@@ -1855,7 +1874,7 @@ const PSA = (function(){
   ['dragover','dragenter'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('drag');}));
   ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.remove('drag');}));
   dz.addEventListener('drop',e=>{ const f=e.dataTransfer.files[0]; if(f) handleFile(f); });
-  $('#newFile').onclick=()=>{ $('#dash').style.display='none'; $('#empty').style.display='block'; MODEL=null; fi.value=''; };
+  $('#newFile').onclick=()=>{ $('#dash').style.display='none'; $('#empty').style.display='block'; MODEL=null; fi.value=''; if(window.__startScope) window.__startScope(); };
 
   function showErr(msg){ const b=$('#errBox'); b.style.display='block';
     b.textContent=msg + ' — try re-exporting from Wireshark as “Wireshark/tcpdump pcap” or pcapng.'; }
