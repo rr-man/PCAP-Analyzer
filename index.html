@@ -7,6 +7,12 @@
   Target: GitHub Pages hosting + Confluence iframe embed.
 
   CHANGELOG
+  v2.9.53 — Added the staggered "signal establishing" entrance (Idea 1): the front-page elements cascade in top-to-bottom — waveform area, headline, description, file button, hint, Media Summary block, action buttons — each ~120ms apart, layered with the spotlight card entrance and handshake intro. Disabled under prefers-reduced-motion.
+  v2.9.52 — Handshake intro duration changed to 5 seconds (phases rescaled proportionally).
+  v2.9.51 — Handshake intro duration changed to 3 seconds (phases rescaled proportionally).
+  v2.9.50 — Shortened the SIP handshake intro to complete in 1.5 seconds (all phases rescaled proportionally).
+  v2.9.49 — SIP handshake intro on the front page: on load (and when returning via New file/Clear), two labeled nodes — device and registrar — appear in the scope area and exchange animated REGISTER → and ← 200 OK arrows over ~1.8s, then dissolve into the traveling-packet waveform. Skipped under prefers-reduced-motion; aborts cleanly if a capture is analyzed mid-intro.
+  v2.9.48 — Front-page ambience: added an animated network-grid backdrop behind the upload screen — a faint lattice of dim nodes with occasional teal packets traveling between them (CLIR palette, theme-aware) — and a spotlight entrance where the dropzone card scales in from 97% with a soft rise and shadow bloom on load. The backdrop pauses on the dashboard, restarts on New file, hides in print, and everything disables under prefers-reduced-motion.
   v2.9.47 — Download PDF now includes ALL tabs. Instead of a rebuilt summary, it reveals every tab panel (Call flow, Registrations, Calls, Media QoS, Messages, Endpoints, Warnings, Legend, Raw) and prints the actual rendered dashboard, each panel headed by its tab name, then restores the view. Guarantees the PDF contains the complete content of every tab and all verdict detail.
   v2.9.46 — Replaced the "Copy summary" button with "Download PDF." It builds a full printable report and opens the browser's print dialog (Save as PDF) — no external libraries, works inside Confluence. The PDF includes everything: summary tiles, every registration (status, plain-English story, what-to-check-first tips, recommended actions, device/MAC/registrar/expiry/NAT detail), every call (caller ID, initiator, codec, timing, story, recommendations), the measured Media QoS scorecard + per-leg table + leg-blame when a Media Summary was pasted, and the findings list.
   v2.9.45 — Updated the upload-screen Media Summary paste-box placeholder to "Paste the Media Summary here. (OCOM > Call Info > Media Summary)."
@@ -231,10 +237,45 @@
 
   /* Dropzone / empty state ----------------------------------------- */
   .stage{padding:26px 0 60px}
+  #empty{position:relative}
+  #netGrid{position:fixed;inset:0;width:100vw;height:100vh;z-index:0;pointer-events:none;opacity:.6}
   .dropzone{
     background:var(--paper);border:1.5px dashed var(--line);border-radius:14px;
     padding:40px 28px;text-align:center;transition:border-color .15s, background .15s;
     box-shadow:var(--shadow);
+    position:relative;z-index:1;
+    animation:dz-spotlight .55s cubic-bezier(.2,.8,.25,1) both;
+  }
+  @keyframes dz-spotlight{
+    0%{opacity:0;transform:scale(.97) translateY(8px);box-shadow:0 0 0 rgba(0,0,0,0)}
+    60%{opacity:1}
+    100%{opacity:1;transform:scale(1) translateY(0);box-shadow:var(--shadow)}
+  }
+  /* Idea 1 — staggered "signal establishing" entrance inside the card */
+  @keyframes dz-rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  .dropzone .dz-scope,
+  .dropzone h1,
+  .dropzone > p,
+  .dropzone #pickBtn,
+  .dropzone .hint,
+  .dropzone .dz-media,
+  .dropzone .dz-actions{
+    animation:dz-rise .45s cubic-bezier(.2,.8,.25,1) both;
+  }
+  .dropzone .dz-scope{animation-delay:.15s}
+  .dropzone h1{animation-delay:.27s}
+  .dropzone > p{animation-delay:.39s}
+  .dropzone #pickBtn{animation-delay:.51s}
+  .dropzone .hint{animation-delay:.63s}
+  .dropzone .dz-media{animation-delay:.75s}
+  .dropzone .dz-actions{animation-delay:.87s}
+  @media (prefers-reduced-motion: reduce){
+    .dropzone .dz-scope,.dropzone h1,.dropzone > p,.dropzone #pickBtn,
+    .dropzone .hint,.dropzone .dz-media,.dropzone .dz-actions{animation:none}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .dropzone{animation:none}
+    #netGrid{display:none}
   }
   .dropzone.drag{border-color:var(--signal);background:#F3FDFB}
   .dz-scope{
@@ -780,7 +821,7 @@
   @media print{
     body{background:#fff!important}
     /* hide only chrome that doesn't belong in a report */
-    header, #empty, #tabs, footer.app, aside, .cl-overlay, .dz-scope,
+    header, #empty, #netGrid, #tabs, footer.app, aside, .cl-overlay, .dz-scope,
     #themeToggle, .privacy, .filebar .btn, .intro { display:none!important; }
     /* show the dashboard */
     #dash{display:block!important}
@@ -819,7 +860,7 @@
     <div class="spacer"></div>
     <span class="privacy" title="Files are parsed in your browser and never uploaded"><span class="dot"></span>parsed locally</span>
     <button class="themebtn" id="themeToggle" title="Toggle dark / light mode" aria-label="Toggle theme"><span id="themeIcon">◐</span><span id="themeLabel">Dark</span></button>
-      <button class="ver" id="verPill" title="View changelog">v2.9.47</button>
+      <button class="ver" id="verPill" title="View changelog">v2.9.53</button>
   </div>
 </header>
 
@@ -827,7 +868,7 @@
   <div class="cl-modal">
     <div class="cl-head">
       <span class="cl-title">📋 Changelog</span>
-      <span class="cl-cur" id="clCur">v2.9.47</span>
+      <span class="cl-cur" id="clCur">v2.9.53</span>
       <button class="cl-close" id="clClose" aria-label="Close">✕</button>
     </div>
     <div class="cl-body" id="clBody"></div>
@@ -838,6 +879,7 @@
 
   <!-- Empty / upload state -->
   <div id="empty">
+    <canvas id="netGrid" aria-hidden="true"></canvas>
     <div class="dropzone" id="dropzone">
       <svg class="dz-scope" id="dzScope" viewBox="0 0 520 74" preserveAspectRatio="none" aria-hidden="true"></svg>
       <h1>Drop a capture to analyze the SIP signaling</h1>
@@ -958,7 +1000,7 @@
 
 
 <footer class="app">
-  <div class="wrap">COEO AI Enablement<span class="fdot"></span>PCAP SIP QOS Analyzer v2.9.47 — offline, in-browser SIP capture analysis</div>
+  <div class="wrap">COEO AI Enablement<span class="fdot"></span>PCAP SIP QOS Analyzer v2.9.53 — offline, in-browser SIP capture analysis</div>
   <div class="wrap credit">Created by
     <a class="author" href="https://www.linkedin.com/in/ronmangune/" target="_blank" rel="noopener noreferrer" title="Ron Mangune on LinkedIn">
       Ron Mangune
@@ -2515,9 +2557,122 @@ const PSA = (function(){
         <circle cx="${Math.max(0,Math.min(W,head)).toFixed(1)}" cy="${dotY.toFixed(1)}" r="2.6" fill="${sig}"/>`;
       t+=0.05; requestAnimationFrame(frame);
     }
-    // Gentle decorative waveform; runs regardless of prefers-reduced-motion.
-    if(typeof requestAnimationFrame==='function'){ window.__startScope=frame; frame(); }
+    // ---- One-time SIP handshake intro: REGISTER → / ← 200 OK, then dissolve into the waveform ----
+    const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function intro(then){
+      if(reduced){ then(); return; }
+      const sig=cssVar('--signal','#0e7a5f');
+      const ink=cssVar('--text','#1c355e');
+      const okC=cssVar('--ok','#0e7a5f');
+      const ax=120, bx=400;              // node x positions
+      const y1=mid-9, y2=mid+13;         // arrow lanes
+      const T0=performance.now();
+      function ease(p){ return p<0?0:p>1?1:p*p*(3-2*p); }
+      function fr(now){
+        if(!$('#empty') || $('#empty').style.display==='none') return;   // aborted
+        const el=(now-T0)/1000;          // seconds elapsed
+        // phases (5s total): 0-0.7 nodes pop · 0.7-2.1 REGISTER → · 2.4-3.8 ← 200 OK · 4.1-4.9 fade out
+        const nodeP=ease(el/0.7);
+        const regP =ease((el-0.7)/1.4);
+        const okP  =ease((el-2.4)/1.4);
+        const fadeP=ease((el-4.1)/0.8);
+        const g=1-fadeP;                  // global fade
+        let s='';
+        // endpoints
+        s+=`<circle cx="${ax}" cy="${mid}" r="${(5*nodeP).toFixed(1)}" fill="${sig}" opacity="${(0.9*g).toFixed(2)}"/>`;
+        s+=`<circle cx="${bx}" cy="${mid}" r="${(5*nodeP).toFixed(1)}" fill="${ink}" opacity="${(0.8*g).toFixed(2)}"/>`;
+        s+=`<text x="${ax}" y="${mid+22}" text-anchor="middle" font-size="8.5" font-family="monospace" fill="${ink}" opacity="${(0.65*nodeP*g).toFixed(2)}">device</text>`;
+        s+=`<text x="${bx}" y="${mid+22}" text-anchor="middle" font-size="8.5" font-family="monospace" fill="${ink}" opacity="${(0.65*nodeP*g).toFixed(2)}">registrar</text>`;
+        // REGISTER → (top lane)
+        if(regP>0){
+          const hx=ax+ (bx-ax)*regP;
+          s+=`<line x1="${ax+8}" y1="${y1}" x2="${hx.toFixed(1)}" y2="${y1}" stroke="${sig}" stroke-width="1.6" opacity="${(0.9*g).toFixed(2)}"/>`;
+          if(regP>0.12) s+=`<path d="M${hx.toFixed(1)} ${y1} l-6 -3.4 v6.8 z" fill="${sig}" opacity="${(0.9*g).toFixed(2)}"/>`;
+          s+=`<text x="${(ax+bx)/2}" y="${y1-5}" text-anchor="middle" font-size="9" font-weight="700" font-family="monospace" fill="${sig}" opacity="${(regP*g).toFixed(2)}">REGISTER</text>`;
+        }
+        // ← 200 OK (bottom lane)
+        if(okP>0){
+          const hx=bx- (bx-ax)*okP;
+          s+=`<line x1="${bx-8}" y1="${y2}" x2="${hx.toFixed(1)}" y2="${y2}" stroke="${okC}" stroke-width="1.6" opacity="${(0.9*g).toFixed(2)}"/>`;
+          if(okP>0.12) s+=`<path d="M${hx.toFixed(1)} ${y2} l6 -3.4 v6.8 z" fill="${okC}" opacity="${(0.9*g).toFixed(2)}"/>`;
+          s+=`<text x="${(ax+bx)/2}" y="${y2+12}" text-anchor="middle" font-size="9" font-weight="700" font-family="monospace" fill="${okC}" opacity="${(okP*g).toFixed(2)}">200 OK</text>`;
+        }
+        svg.innerHTML=s;
+        if(el<5.0) requestAnimationFrame(fr);
+        else then();                      // hand off to the waveform
+      }
+      requestAnimationFrame(fr);
+    }
+    // Play intro once, then the waveform. __startScope replays intro when returning to this screen.
+    if(typeof requestAnimationFrame==='function'){
+      window.__startScope=()=>{ t=0; intro(frame); };
+      window.__startScope();
+    }
     else svg.innerHTML=`<polyline points="0,37 130,37 160,16 200,58 240,30 300,44 340,20 520,37" fill="none" stroke="${cssVar('--signal','#4cc9a4')}" stroke-width="1.6"/>`;
+  })();
+
+  /* --- ambient network-grid backdrop (front page) --- */
+  (function(){
+    const cv=document.getElementById('netGrid'); if(!cv) return;
+    if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const ctx=cv.getContext('2d'); if(!ctx) return;
+    const cssVar=(n,f)=>{ try{ const v=getComputedStyle(document.documentElement).getPropertyValue(n).trim(); return v||f; }catch(e){ return f; } };
+    let nodes=[], links=[], packets=[], W=0, H=0, running=false;
+    function build(){
+      W=cv.width=window.innerWidth; H=cv.height=window.innerHeight;
+      nodes=[]; links=[]; packets=[];
+      const gap=110;                                   // grid spacing
+      const cols=Math.ceil(W/gap)+1, rows=Math.ceil(H/gap)+1;
+      for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+        nodes.push({x:c*gap+(Math.sin(r*7+c*13)*18), y:r*gap+(Math.cos(r*5+c*11)*18)});
+      }
+      const colsN=cols;
+      for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+        const i=r*colsN+c;
+        if(c<cols-1) links.push([i,i+1]);
+        if(r<rows-1) links.push([i,i+colsN]);
+      }
+    }
+    function spawn(){
+      if(packets.length>=6) return;                    // keep it calm
+      const l=links[(Math.random()*links.length)|0];
+      packets.push({l, t:0, sp:0.004+Math.random()*0.006});
+    }
+    let lastSpawn=0;
+    function frame(ts){
+      const empty=document.getElementById('empty');
+      if(!empty || empty.style.display==='none'){ running=false; return; }   // pause on dashboard
+      const nodeC=cssVar('--line','#dde4e8');
+      const sig=cssVar('--signal','#0e7a5f');
+      ctx.clearRect(0,0,W,H);
+      // links (very faint)
+      ctx.strokeStyle=nodeC; ctx.globalAlpha=0.16; ctx.lineWidth=1;
+      ctx.beginPath();
+      links.forEach(([a,b])=>{ ctx.moveTo(nodes[a].x,nodes[a].y); ctx.lineTo(nodes[b].x,nodes[b].y); });
+      ctx.stroke();
+      // nodes (dim dots)
+      ctx.globalAlpha=0.3; ctx.fillStyle=nodeC;
+      nodes.forEach(n=>{ ctx.beginPath(); ctx.arc(n.x,n.y,1.6,0,7); ctx.fill(); });
+      // packets (teal, soft trail)
+      packets.forEach(p=>{
+        const [a,b]=p.l, A=nodes[a], B=nodes[b];
+        const x=A.x+(B.x-A.x)*p.t, y=A.y+(B.y-A.y)*p.t;
+        ctx.globalAlpha=0.5; ctx.fillStyle=sig;
+        ctx.beginPath(); ctx.arc(x,y,2.4,0,7); ctx.fill();
+        ctx.globalAlpha=0.18;
+        const tx=A.x+(B.x-A.x)*Math.max(0,p.t-0.12), ty=A.y+(B.y-A.y)*Math.max(0,p.t-0.12);
+        ctx.strokeStyle=sig; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(tx,ty); ctx.lineTo(x,y); ctx.stroke();
+        p.t+=p.sp;
+      });
+      packets=packets.filter(p=>p.t<1);
+      if(ts-lastSpawn>650){ spawn(); lastSpawn=ts; }
+      ctx.globalAlpha=1;
+      requestAnimationFrame(frame);
+    }
+    function start(){ if(running) return; running=true; build(); requestAnimationFrame(frame); }
+    window.addEventListener('resize', ()=>{ if(running) build(); });
+    window.__startGrid=start;
+    start();
   })();
 
   /* --- file handling --- */
@@ -2545,7 +2700,7 @@ const PSA = (function(){
     const dzp=$('#dzPicked'); if(dzp){ dzp.style.display='none'; dzp.innerHTML=''; }
     const dzm=$('#dzMsInput'); if(dzm) dzm.value='';
     $('#errBox').style.display='none';
-    if(window.__startScope) window.__startScope();
+    if(window.__startScope) window.__startScope(); if(window.__startGrid) window.__startGrid();
   };
   $('#newFile').onclick=()=>{
     $('#dash').style.display='none'; $('#empty').style.display='block';
@@ -2554,7 +2709,7 @@ const PSA = (function(){
     const dzm=$('#dzMsInput'); if(dzm) dzm.value='';
     const msi=$('#msInput'); if(msi) msi.value='';
     const msr=$('#msResult'); if(msr) msr.innerHTML='';
-    if(window.__startScope) window.__startScope();
+    if(window.__startScope) window.__startScope(); if(window.__startGrid) window.__startGrid();
   };
 
   function showErr(msg){ const b=$('#errBox'); b.style.display='block';
