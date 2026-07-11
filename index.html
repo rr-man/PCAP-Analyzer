@@ -7,6 +7,13 @@
   Target: GitHub Pages hosting + Confluence iframe embed.
 
   CHANGELOG
+  v2.9.45 — Updated the upload-screen Media Summary paste-box placeholder to "Paste the Media Summary here. (OCOM > Call Info > Media Summary)."
+  v2.9.44 — Updated the upload-screen hint to "OCOM · Registration · Call info · Media Summary."
+  v2.9.43 — Changed the upload-screen hint under the file picker to read "OCOM Registration - Call info."
+  v2.9.42 — Fixed a regression where registration verdict cards (status, story, tips, technical detail) did not appear on registration-only captures. The call and registration verdicts share one container; the call renderer had been clearing the whole container and returning early when there were no calls, wiping the registration cards. It now removes only its own call cards, so registration cards always render. No change to call/QoS behavior.
+  v2.9.41 — Reverted the per-card device band and health strip that had been added inside each registration verdict (v2.9.39), restoring the clean registration verdict card (status, plain-English story, what-to-check-first, technical detail). The prominent top-of-dashboard Registration Health band (v2.9.40) is kept. Call/QoS untouched.
+  v2.9.40 — Added a prominent Registration Health band at the top of the dashboard (the registration parallel to the call-side QoS strip): big headline counts for Registered, Failed/Signed-out, Behind NAT, and total Identities, plus a status badge (all healthy / keepalive-risk / not registered). The whole band is clickable and jumps to the Registrations tab. Only appears for captures containing registrations.
+  v2.9.39 — Registration dashboard: added two prominent bands to each registration verdict. A Device & identity band (shown only when the device advertised info) surfaces vendor/model, device kind, firmware, MAC + OUI vendor with a vendor-mismatch flag, the AOR, and a placeholder-identity badge. Below it, a Registration health strip shows the expiry, approximate refresh interval, NAT state, and transport — and flags the high-risk case of a short expiry behind NAT (keepalive-dependent; pinhole can close between refreshes and drop inbound calls while still "registered"). Call/QoS side untouched.
   v2.9.38 — When a Media Summary was pasted on the upload screen, pressing Analyze now opens directly on the Media QoS tab (so you land on the voice-quality results). Without a summary it still opens on Call flow.
   v2.9.37 — Renamed the tool to "PCAP SIP QOS Analyzer" (header title, page title, footer, and metadata) to reflect the added voice-quality/MOS analysis.
   v2.9.36 — The version pill in the top-right is now clickable and opens a Changelog modal, listing every version and its summary (read from the embedded changelog). Close with the ✕, Escape, or by clicking outside.
@@ -468,6 +475,23 @@
   .verdict .vqos-note{margin-top:11px;font-size:11.5px;line-height:1.55;color:var(--muted);
     background:var(--amber-bg);border-radius:8px;padding:9px 11px}
   .verdict .vqos-note b{color:var(--text)}
+  /* Registration Health band (dashboard headline, parallel to call QoS strip) */
+  #regHealthBand{margin:0 0 4px}
+  .rhband{padding:14px 18px;border-radius:12px;background:var(--ink-2);border:1px solid var(--line);
+    display:flex;align-items:center;gap:24px;cursor:pointer;transition:border-color .12s,background .12s;flex-wrap:wrap}
+  .rhband:hover{border-color:var(--signal);background:var(--signal-bg)}
+  .rhband:focus{outline:none;border-color:var(--signal);box-shadow:0 0 0 3px rgba(14,122,95,.15)}
+  .rhband.warn{border-color:var(--amber)} .rhband.fail{border-color:var(--alert)}
+  .rhb-scores{display:flex;gap:30px;flex-wrap:wrap}
+  .rhband .rhb-l{font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+  .rhband .rhb-v{font-size:32px;font-weight:800;line-height:1.05;font-variant-numeric:tabular-nums;color:var(--text)}
+  .rhband .rhb-v.ok{color:var(--ok)} .rhband .rhb-v.warn{color:var(--amber)} .rhband .rhb-v.fail{color:var(--alert)} .rhband .rhb-v.muted{color:var(--muted)}
+  .rhb-side{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:7px;text-align:right}
+  .rhb-badge{font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px;white-space:nowrap}
+  .rhb-badge.ok{background:var(--wire-bg);color:var(--ok)}
+  .rhb-badge.warn{background:var(--amber-bg);color:var(--amber)}
+  .rhb-badge.fail{background:var(--alert-bg);color:var(--alert)}
+  .rhb-link{font-size:11.5px;font-weight:700;color:var(--signal)}
   .verdict .vinit{margin-top:12px;padding:9px 13px;border-radius:9px;background:var(--signal-bg);
     border:1px solid var(--signal);display:flex;align-items:center;gap:9px}
   .verdict .vinit-ico{font-size:15px}
@@ -767,7 +791,7 @@
     <div class="spacer"></div>
     <span class="privacy" title="Files are parsed in your browser and never uploaded"><span class="dot"></span>parsed locally</span>
     <button class="themebtn" id="themeToggle" title="Toggle dark / light mode" aria-label="Toggle theme"><span id="themeIcon">◐</span><span id="themeLabel">Dark</span></button>
-      <button class="ver" id="verPill" title="View changelog">v2.9.38</button>
+      <button class="ver" id="verPill" title="View changelog">v2.9.45</button>
   </div>
 </header>
 
@@ -775,7 +799,7 @@
   <div class="cl-modal">
     <div class="cl-head">
       <span class="cl-title">📋 Changelog</span>
-      <span class="cl-cur" id="clCur">v2.9.38</span>
+      <span class="cl-cur" id="clCur">v2.9.45</span>
       <button class="cl-close" id="clClose" aria-label="Close">✕</button>
     </div>
     <div class="cl-body" id="clBody"></div>
@@ -795,12 +819,12 @@
       <button class="btn" id="pickBtn">Choose capture file</button>
       <input type="file" id="fileInput" accept=".pcap,.pcapng,.cap" hidden />
       <div class="dz-picked" id="dzPicked" style="display:none"></div>
-      <div class="hint">supports classic pcap + pcapng · Ethernet / raw IP / SLL / loopback · UDP &amp; TCP</div>
+      <div class="hint">OCOM · Registration · Call info · Media Summary</div>
 
       <div class="dz-media">
         <div class="dz-media-h">📈 Optional — add a Media Summary now for measured voice quality (MOS)</div>
         <p class="dz-media-p">Paste an Operations Monitor <b>Media Summary</b> to fold real per-leg MOS, loss, and jitter into the results. You can also add it later from the Media QoS tab.</p>
-        <textarea id="dzMsInput" class="qos-paste" placeholder="Paste the Media Summary here (optional)…"></textarea>
+        <textarea id="dzMsInput" class="qos-paste" placeholder="Paste the Media Summary here. (OCOM &gt; Call Info &gt; Media Summary)"></textarea>
       </div>
 
       <div class="dz-actions">
@@ -824,6 +848,8 @@
     </div>
 
     <div class="cards" id="cards"></div>
+
+    <div id="regHealthBand"></div>
 
     <details class="intro">
       <summary>❓ New to this? Registrations and calls, explained (30-second read)</summary>
@@ -903,7 +929,7 @@
 </aside>
 
 <footer class="app">
-  <div class="wrap">COEO AI Enablement<span class="fdot"></span>PCAP SIP QOS Analyzer v2.9.38 — offline, in-browser SIP capture analysis</div>
+  <div class="wrap">COEO AI Enablement<span class="fdot"></span>PCAP SIP QOS Analyzer v2.9.45 — offline, in-browser SIP capture analysis</div>
   <div class="wrap credit">Created by
     <a class="author" href="https://www.linkedin.com/in/ronmangune/" target="_blank" rel="noopener noreferrer" title="Ron Mangune on LinkedIn">
       Ron Mangune
@@ -2534,7 +2560,7 @@ const PSA = (function(){
     $('#fFile').textContent=m.filename;
     $('#fMeta').textContent=`${m.cap.format.toUpperCase()} · linktype ${m.cap.linktype} · ${m.cap.packetCount} frames · ${(m.durationMs).toFixed(0)} ms · ${(file.size/1024).toFixed(1)} KB`;
 
-    renderCards(m); renderVerdicts(m); renderCallVerdicts(m); renderStatusLegend(m); renderTabs(m); renderLadder(m); renderCalls(m); wireMediaQoS();
+    renderCards(m); renderRegHealth(m); renderVerdicts(m); renderCallVerdicts(m); renderStatusLegend(m); renderTabs(m); renderLadder(m); renderCalls(m); wireMediaQoS();
     renderReg(m); renderMsgs(m); renderEndpoints(m); renderWarnings(m); renderRaw(m);
     setTab(MEDIA_QOS && MEDIA_QOS.ok ? 'qos' : 'ladder');
     window.scrollTo({top:0});
@@ -2724,11 +2750,13 @@ const PSA = (function(){
   function renderCallVerdicts(m){
     const host=$('#verdicts');
     if(!host) return;
-    host.innerHTML='';                 // clear first — this is a full re-render (also called on QoS update)
+    // #verdicts is shared with registration verdicts — remove only previously
+    // rendered CALL cards (so QoS re-renders don't duplicate), never the reg cards.
+    host.querySelectorAll(':scope > .verdict.callcard').forEach(n=>n.remove());
     if(!m.calls || !m.calls.length) return;
     m.calls.forEach(c=>{
       const p=c.primary;
-      const d=el('div','verdict '+p.ocls);
+      const d=el('div','verdict callcard '+p.ocls);
       const icon = p.ocls==='ok'?'📞' : p.redirected?'↪️' : p.ocls==='unreg'?'↩️' : '❌';
       const status = p.ocls==='ok' ? (p.outcome==='completed'?'CALL COMPLETED':'CALL CONNECTED')
         : p.redirected ? 'REDIRECTED'
@@ -2875,6 +2903,42 @@ const PSA = (function(){
       grid.appendChild(card);
     });
     p.appendChild(grid);
+  }
+
+  // Prominent Registration Health band (parallel to the call-side QoS strip).
+  function renderRegHealth(m){
+    window.__gotoReg = ()=>{ setTab('reg'); };
+    const host=$('#regHealthBand'); if(!host) return;
+    host.innerHTML='';
+    if(!m.verdicts || !m.verdicts.length) return;   // only when the capture has registrations
+    const V=m.verdicts;
+    const registered = V.filter(v=>v.cls==='ok').length;
+    const signedOut  = V.filter(v=>v.cls==='unreg').length;
+    const failed     = V.filter(v=>v.cls==='fail').length;
+    const total=V.length;
+    // keepalive-risk: registered bindings with short expiry behind NAT
+    const risk = V.filter(v=>v.cls==='ok' && v.nat && v.expires!=null && v.expires<=60);
+    // NAT count among registered
+    const natCount = V.filter(v=>v.cls==='ok' && v.nat).length;
+    const grade = failed>0 ? 'fail' : risk.length>0 ? 'warn' : 'ok';
+    const badge = failed>0
+      ? `<span class="rhb-badge fail">⛔ ${failed} not registered</span>`
+      : risk.length>0
+        ? `<span class="rhb-badge warn">⚠️ ${risk.length} keepalive-risk</span>`
+        : `<span class="rhb-badge ok">✓ all healthy</span>`;
+    host.innerHTML=`
+      <div class="rhband ${grade}" role="button" tabindex="0" onclick="window.__gotoReg&&window.__gotoReg()" onkeydown="if(event.key==='Enter')window.__gotoReg&&window.__gotoReg()">
+        <div class="rhb-scores">
+          <div class="rhb"><div class="rhb-l">Registered</div><div class="rhb-v ok">${registered}</div></div>
+          <div class="rhb"><div class="rhb-l">${signedOut?'Signed out':'Failed'}</div><div class="rhb-v ${signedOut&&!failed?'muted':'fail'}">${signedOut&&!failed?signedOut:failed}</div></div>
+          <div class="rhb"><div class="rhb-l">Behind NAT</div><div class="rhb-v ${natCount?'warn':''}">${natCount}</div></div>
+          <div class="rhb"><div class="rhb-l">Identities</div><div class="rhb-v">${total}</div></div>
+        </div>
+        <div class="rhb-side">
+          ${badge}
+          <span class="rhb-link">Open Registrations →</span>
+        </div>
+      </div>`;
   }
 
   function renderCards(m){
