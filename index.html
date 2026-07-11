@@ -7,6 +7,8 @@
   Target: GitHub Pages hosting + Confluence iframe embed.
 
   CHANGELOG
+  v2.9.47 — Download PDF now includes ALL tabs. Instead of a rebuilt summary, it reveals every tab panel (Call flow, Registrations, Calls, Media QoS, Messages, Endpoints, Warnings, Legend, Raw) and prints the actual rendered dashboard, each panel headed by its tab name, then restores the view. Guarantees the PDF contains the complete content of every tab and all verdict detail.
+  v2.9.46 — Replaced the "Copy summary" button with "Download PDF." It builds a full printable report and opens the browser's print dialog (Save as PDF) — no external libraries, works inside Confluence. The PDF includes everything: summary tiles, every registration (status, plain-English story, what-to-check-first tips, recommended actions, device/MAC/registrar/expiry/NAT detail), every call (caller ID, initiator, codec, timing, story, recommendations), the measured Media QoS scorecard + per-leg table + leg-blame when a Media Summary was pasted, and the findings list.
   v2.9.45 — Updated the upload-screen Media Summary paste-box placeholder to "Paste the Media Summary here. (OCOM > Call Info > Media Summary)."
   v2.9.44 — Updated the upload-screen hint to "OCOM · Registration · Call info · Media Summary."
   v2.9.43 — Changed the upload-screen hint under the file picker to read "OCOM Registration - Call info."
@@ -773,6 +775,32 @@
     .cards{grid-template-columns:repeat(2,1fr)}
     .filebar{align-items:flex-start}
   }
+  /* Print — include the full dashboard AND every tab panel */
+  #printReport{display:none}
+  @media print{
+    body{background:#fff!important}
+    /* hide only chrome that doesn't belong in a report */
+    header, #empty, #tabs, footer.app, aside, .cl-overlay, .dz-scope,
+    #themeToggle, .privacy, .filebar .btn, .intro { display:none!important; }
+    /* show the dashboard */
+    #dash{display:block!important}
+    /* reveal ALL tab panels, not just the active one */
+    body.printing-all .panel{display:block!important;page-break-before:always;margin-top:0}
+    body.printing-all #p-ladder{page-break-before:avoid}
+    /* label each panel with its tab name */
+    body.printing-all .panel::before{
+      display:block;content:attr(data-print-title);
+      font-size:15px;font-weight:800;color:#1c355e;border-bottom:2px solid #1c355e;
+      padding-bottom:5px;margin:0 0 12px;letter-spacing:-.01em}
+    /* keep verdict/card blocks from splitting across pages */
+    .verdict, .tablecard, .reg-card, .rhband, .vqos, .qos-card, .qos-leg { page-break-inside:avoid }
+    /* neutralize dark backgrounds for print legibility */
+    .ladder-wrap, #ladder, .raw, .rawbox { background:#fff!important; color:#111!important }
+    a{color:#1c355e!important;text-decoration:none}
+    @page{margin:12mm}
+    /* file title block at very top */
+    #cards{ break-inside:avoid }
+  }
   @media (prefers-reduced-motion: reduce){
     *{animation:none!important;transition:none!important}
   }
@@ -791,7 +819,7 @@
     <div class="spacer"></div>
     <span class="privacy" title="Files are parsed in your browser and never uploaded"><span class="dot"></span>parsed locally</span>
     <button class="themebtn" id="themeToggle" title="Toggle dark / light mode" aria-label="Toggle theme"><span id="themeIcon">◐</span><span id="themeLabel">Dark</span></button>
-      <button class="ver" id="verPill" title="View changelog">v2.9.45</button>
+      <button class="ver" id="verPill" title="View changelog">v2.9.47</button>
   </div>
 </header>
 
@@ -799,7 +827,7 @@
   <div class="cl-modal">
     <div class="cl-head">
       <span class="cl-title">📋 Changelog</span>
-      <span class="cl-cur" id="clCur">v2.9.45</span>
+      <span class="cl-cur" id="clCur">v2.9.47</span>
       <button class="cl-close" id="clClose" aria-label="Close">✕</button>
     </div>
     <div class="cl-body" id="clBody"></div>
@@ -843,7 +871,7 @@
         <div class="fmeta" id="fMeta">—</div>
       </div>
       <div class="spacer"></div>
-      <button class="btn accent small" id="copySummary">Copy summary</button>
+      <button class="btn accent small" id="downloadPdf">Download PDF</button>
       <button class="btn primary small" id="newFile">New file</button>
     </div>
 
@@ -878,7 +906,7 @@
 
     <div class="tabs" id="tabs"></div>
 
-    <div class="panel" id="p-ladder">
+    <div class="panel" id="p-ladder" data-print-title="Call Flow">
       <div class="ladder-legend">
         <span class="lg"><span class="sw" style="border-color:#0e7a5f"></span>request</span>
         <span class="lg"><span class="sw" style="border-color:#0e7a5f"></span>2xx</span>
@@ -890,9 +918,9 @@
       <div id="ladder-note" class="ladder-note"></div>
     </div>
 
-    <div class="panel" id="p-reg"></div>
-    <div class="panel" id="p-calls"></div>
-    <div class="panel" id="p-qos">
+    <div class="panel" id="p-reg" data-print-title="Registrations"></div>
+    <div class="panel" id="p-calls" data-print-title="Calls"></div>
+    <div class="panel" id="p-qos" data-print-title="Media QoS">
       <div class="qos-intro">
         <div class="qos-intro-h">📈 Media QoS — measured voice quality</div>
         <p>The call-signaling PCAP contains no RTP audio, so voice quality can't be measured from it directly. Paste an <b>Operations Monitor "Media Summary"</b> below (from the probes on the media path) to get the real per-direction MOS, packet loss, and jitter — and see which leg is causing any problem.</p>
@@ -904,11 +932,11 @@
       </div>
       <div id="msResult"></div>
     </div>
-    <div class="panel" id="p-msgs"></div>
-    <div class="panel" id="p-ep"></div>
-    <div class="panel" id="p-warn"></div>
-    <div class="panel" id="p-legend"></div>
-    <div class="panel" id="p-raw">
+    <div class="panel" id="p-msgs" data-print-title="Messages"></div>
+    <div class="panel" id="p-ep" data-print-title="Endpoints"></div>
+    <div class="panel" id="p-warn" data-print-title="Warnings"></div>
+    <div class="panel" id="p-legend" data-print-title="Legend"></div>
+    <div class="panel" id="p-raw" data-print-title="Raw Messages">
       <div class="rawtools">
         <select class="picker" id="rawPick"></select>
         <button class="btn ghost small" id="copyRaw">Copy message</button>
@@ -928,8 +956,9 @@
   <div class="db" id="drawerBody"></div>
 </aside>
 
+
 <footer class="app">
-  <div class="wrap">COEO AI Enablement<span class="fdot"></span>PCAP SIP QOS Analyzer v2.9.45 — offline, in-browser SIP capture analysis</div>
+  <div class="wrap">COEO AI Enablement<span class="fdot"></span>PCAP SIP QOS Analyzer v2.9.47 — offline, in-browser SIP capture analysis</div>
   <div class="wrap credit">Created by
     <a class="author" href="https://www.linkedin.com/in/ronmangune/" target="_blank" rel="noopener noreferrer" title="Ron Mangune on LinkedIn">
       Ron Mangune
@@ -3374,11 +3403,17 @@ const PSA = (function(){
   }
 
   /* ---- exports ---- */
-  $('#copySummary').onclick=()=>{
+  $('#downloadPdf').onclick=()=>{
     if(!MODEL) return;
-    navigator.clipboard.writeText(confluenceSummary(MODEL));
-    flash($('#copySummary'),'Copied');
+    flash($('#downloadPdf'),'Preparing…');
+    document.body.classList.add('printing-all');   // reveal every tab panel for print
+    // ensure the call-flow ladder (SVG) is present; it renders on load, so it's already there
+    setTimeout(()=>{
+      window.print();
+      setTimeout(()=>document.body.classList.remove('printing-all'), 300);
+    }, 60);
   };
+
   function confluenceSummary(m){
     let s=`h2. SIP Capture Analysis — ${m.filename}\n\n`;
     s+=`*Container:* ${m.cap.format} (linktype ${m.cap.linktype}) | *Frames:* ${m.cap.packetCount} | *SIP messages:* ${m.sipTotal} | *Duration:* ${(m.durationMs/1000).toFixed(2)}s\n\n`;
