@@ -1,12 +1,34 @@
 <!DOCTYPE html>
 <!--
-  COEO AI Enablement — PCAP SIP Analyzer
+  COEO AI Enablement — PCAP SIP QOS Analyzer
   Single-file HTML tool. No external dependencies. All parsing runs in-browser;
   capture files never leave the machine.
 
   Target: GitHub Pages hosting + Confluence iframe embed.
 
   CHANGELOG
+  v2.9.38 — When a Media Summary was pasted on the upload screen, pressing Analyze now opens directly on the Media QoS tab (so you land on the voice-quality results). Without a summary it still opens on Call flow.
+  v2.9.37 — Renamed the tool to "PCAP SIP QOS Analyzer" (header title, page title, footer, and metadata) to reflect the added voice-quality/MOS analysis.
+  v2.9.36 — The version pill in the top-right is now clickable and opens a Changelog modal, listing every version and its summary (read from the embedded changelog). Close with the ✕, Escape, or by clicking outside.
+  v2.9.35 — Added a Clear button on the upload screen next to Analyze: it resets the staged capture file, the file picker, and the Media Summary paste box so you can start over without reloading.
+  v2.9.34 — The "Quality problem on one leg" banner now mirrors the two-level pattern: a short simple summary (which direction, the reason, that only the receiving party hears it) shows by default, with a "Technical detail" toggle that expands the full breakdown — per-direction RTP/SSRC, MOS/R-factor/loss/jitter values, one-way routing rationale, and the loss-vs-G.711 / jitter-vs-buffer analysis.
+  v2.9.33 — Recommendations now have two levels: each row shows a short simple action by default, and clicking it expands the full technical explanation (collapsible). Keeps the panel scannable while the deep detail is one click away.
+  v2.9.32 — Renamed the Media QoS next-steps panel to "Recommendations" and rewrote it at a technical (L1/NOC) level: unidirectional RTP/SSRC fault framing, packet-loss vs ~1% G.711 ceiling with interface error/discard, policer/shaper and half-duplex checks; jitter vs de-jitter buffer depth with DSCP EF/LLQ and reordering causes; an ordered fault-domain walk (UA/NIC → access egress → WAN/inter-VLAN trunk → receiver ingress); QoS marking/ALG/transcoding config checks; and a carrier escalation line carrying the impaired direction, 5-tuple/SSRC, loss, jitter, R-factor and SIP Call-ID, plus post-change acceptance criteria.
+  v2.9.31 — Media QoS tab now gives ELI5 "what to do next" recommendations under the scorecard: it explains the problem in plain English (two one-way roads, only one person hears the bad audio), what the loss/jitter means, where on the path to look (sender → egress → segment → receiver), when to involve the carrier with the Call-ID, and how to verify the fix. Healthy calls get a simple all-good message plus keep-a-baseline tip.
+  v2.9.30 — Media QoS tab scorecard (Average/Minimum MOS) reduced to 20px.
+  v2.9.29 — Swapped MOS score sizing: the dashboard QoS strip (Average/Minimum MOS) is now the prominent 34px, and the Media QoS tab scorecard is the smaller 24px.
+  v2.9.28 — Enlarged the Average MOS and Minimum MOS scores in the Media QoS tab so they read as the primary numbers on that tab (44px), matching/exceeding the dashboard strip and giving the section more presence.
+  v2.9.27 — The upload screen now lets you capture everything at once: choose/drop a capture file, optionally paste a Media Summary in the same screen, then press Analyze. Picking a file no longer auto-runs — it stages the file (with a confirmation line) so you can add the Media Summary first. Pressing Analyze processes both together, so the dashboard opens with measured MOS already populated. The pasted summary is mirrored into the Media QoS tab. New file resets the staged file and both paste boxes.
+  v2.9.26 — When no Media Summary has been added, the dashboard Voice quality (MOS) strip now uses an amber-alert background and reads "Voice quality (MOS) not loaded — click Open Media QoS to upload / paste the Media Summary file," making it obvious that MOS data is missing and how to add it.
+  v2.9.25 — Fixed two QoS issues: (1) the pasted Media Summary / MOS is now always cleared when a new capture is loaded (via New file or a fresh drop), including the paste box and results; (2) fixed the dashboard duplicating its call verdicts after a Media Summary was analyzed — renderCallVerdicts now clears its container before re-rendering, so updating QoS refreshes in place instead of appending a second copy.
+  v2.9.24 — Dashboard QoS simplified to a compact strip: it now shows only the Average MOS and Minimum MOS (reflecting the pasted Media Summary) plus a leg-status badge, and the whole strip is clickable to jump straight to the Media QoS tab. Removed the large voice-quality panel (codec-estimate/RTP breakdowns) from the dashboard — full per-leg detail lives in the Media QoS tab. When no summary is pasted, the strip shows a short prompt that also opens the tab.
+  v2.9.23 — The dashboard Voice quality (QoS) panel is now driven by the Media QoS tab: once a Media Summary is pasted and analyzed, the dashboard shows those exact measured numbers (overall Min/Average MOS, worst-leg loss/jitter, and the leg-blame line), so the two views always agree. Order of truth: pasted Media Summary → measured RTP in the pcap → codec-ceiling estimate. Pasting, clearing, or loading a new file re-renders the dashboard and Calls tab to stay in sync.
+  v2.9.22 — New Media QoS tab: paste an Operations Monitor "Media Summary" and get accurate, measured MOS. Parses each probe stream (SSRC, reporter, codec, R-factor, MOS avg/min, packets received/lost/discarded, loss %, jitter avg/max, Call-ID), de-duplicates reporters per direction, and shows an overall Average MOS + Minimum MOS scorecard, a per-direction leg table, and a leg-blame banner that names which direction is causing the problem, why (loss/jitter), and flags one-way issues with guidance on which path to investigate.
+  v2.9.21 — Real measured MOS when RTP is present (Option B): the engine now decodes RTP media packets, groups them by SSRC, and computes packet loss (sequence gaps) and interarrival jitter (RFC 3550), then MOS via the ITU E-model (loss+jitter → R-factor → MOS), reporting Min (worst 1s window) and Average per call by matching the SDP media IP:port. When a capture has RTP the QoS panel shows a green "measured from RTP" result with loss% and jitter; when it does not (signaling-only, like Operations Monitor traces) it falls back to the amber codec-ceiling estimate. Measured MOS also flows to the Calls tab and Confluence export.
+  v2.9.20 — Added a QoS section on call verdicts showing estimated Min MOS and Average MOS derived from the negotiated codec's best-case ceiling (e.g. PCMU/G.711 = 4.4). Clearly labeled ESTIMATE with a prominent limitation note: these captures are SIP-signaling-only (no RTP), so real loss/jitter/latency are unmeasured and actual MOS may be lower; Min and Avg are equal because there is no per-packet data. Also added to the Calls tab and Confluence export (with the same caveat).
+  v2.9.19 — Initiator device on the dashboard now shows just the name (e.g. the carrier name like Bandwidth / Telnyx / VoIP Innovations, or "Asterisk gateway"); the full details — IP:port, public/private, transport, SBC vendor hint, contact host, and the explanatory note — moved into the collapsible Technical detail section.
+  v2.9.18 — Initiator device surfaced on the call dashboard: the box that originated the INVITE is identified and classified — known carrier SBCs are named (Bandwidth, Inteliquent/IQNT, Telnyx, VoIP Innovations via source-IP ranges, with Sansay/BroadWorks SBC hints from the Via branch/UA), plus Internal PBX gateway, Hardphone/Softphone (direct), or internal/external node. Shown as a highlighted panel on each call verdict with a plain-English note, plus a column in the Calls tab and Confluence export.
+  v2.9.17 — Caller ID / CNAM surfaced on calls: a Caller ID panel on each call verdict shows the caller name and number, a CNAM-type classification (subscriber/business, city-state fallback, generic carrier fallback like WIRELESS CALLER, internal extension, anonymous, or number-only), the header the name came from (From / P-Asserted-Identity / Remote-Party-ID) with a mismatch flag, privacy/screen flags, and ISUP OLI line-type (e.g. OLI 62 = wireless). Also added to the Calls tab cards and the Confluence export.
   v2.9.16 — Light mode is now the default; the tool no longer follows the OS prefers-color-scheme. Dark mode is used only if the user explicitly toggled to it before (their choice is still remembered).
   v2.9.15 — New empty-state waveform: a traveling audio-packet burst (gaussian envelope over a speech-like carrier) with a soft glow, grid ticks, and a leading dot. Fully theme-aware — the scope canvas, trace, and grid all read from the CLIR tokens, so it is a teal trace on a light card in light mode and a bright teal trace on the dark card in dark mode.
   v2.9.14 — Fixed the empty-state scope waveform not animating: it was suppressed under prefers-reduced-motion and its dark canvas/line colors had gone stale after the palette change. The gentle decorative waveform now animates for everyone, uses a fixed dark scope with a teal trace visible in both modes, and restarts when returning to the upload screen via New file.
@@ -60,7 +82,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>PCAP SIP Analyzer · COEO AI Enablement</title>
+<title>PCAP SIP QOS Analyzer · COEO AI Enablement</title>
 <style>
   :root{
     /* Palette — aligned to COEO CLIR project ------------------------- */
@@ -172,7 +194,26 @@
   .ver{
     font-family:var(--mono);font-size:11.5px;color:#b9c6da;
     border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:3px 9px;
-  }
+    background:transparent;cursor:pointer;transition:background .12s,color .12s,border-color .12s}
+  .ver:hover{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.4)}
+  .ver:focus{outline:none;box-shadow:0 0 0 3px rgba(255,255,255,.18)}
+  .cl-overlay{position:fixed;inset:0;background:rgba(12,20,30,.55);backdrop-filter:blur(2px);
+    display:none;align-items:flex-start;justify-content:center;z-index:200;padding:60px 16px}
+  .cl-overlay.open{display:flex}
+  .cl-modal{background:var(--paper);border:1px solid var(--line);border-radius:14px;max-width:680px;width:100%;
+    max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  .cl-head{display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid var(--line)}
+  .cl-title{font-size:15px;font-weight:800;color:var(--text)}
+  .cl-cur{font-family:var(--mono);font-size:11.5px;color:var(--signal);border:1px solid var(--signal);
+    border-radius:999px;padding:2px 9px}
+  .cl-close{margin-left:auto;background:transparent;border:none;font-size:16px;color:var(--muted);cursor:pointer;
+    width:30px;height:30px;border-radius:8px;line-height:1}
+  .cl-close:hover{background:var(--surface);color:var(--text)}
+  .cl-body{overflow-y:auto;padding:8px 18px 18px}
+  .cl-entry{display:grid;grid-template-columns:74px 1fr;gap:12px;padding:11px 0;border-top:1px solid var(--line)}
+  .cl-entry:first-child{border-top:none}
+  .cl-ver{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--signal)}
+  .cl-txt{font-size:12.5px;line-height:1.55;color:var(--muted)}
   .privacy{
     font-size:11.5px;color:var(--signal);display:flex;align-items:center;gap:6px;
   }
@@ -192,6 +233,14 @@
     background:var(--paper);border-radius:10px;border:1px solid var(--line);
   }
   .dropzone h1{font-size:20px;margin:6px 0 6px;letter-spacing:-.01em}
+  .dz-picked{margin:2px auto 14px;max-width:520px;font-size:13px;color:var(--ok);
+    background:var(--wire-bg);border:1px solid var(--ok);border-radius:8px;padding:8px 12px}
+  .dz-picked .faint{color:var(--muted);font-weight:400}
+  .dz-media{margin:18px auto 4px;max-width:560px;text-align:left;border-top:1px solid var(--line);padding-top:16px}
+  .dz-media-h{font-size:13.5px;font-weight:800;color:var(--text);margin-bottom:4px}
+  .dz-media-p{font-size:12.5px;color:var(--muted);line-height:1.5;margin:0 0 10px}
+  .dz-actions{margin:18px 0 4px}
+  .dz-actions .btn.primary{font-size:15px;padding:11px 30px}
   .dropzone p{color:var(--muted);margin:0 auto 18px;max-width:520px;font-size:14px}
   .btn{
     font-family:var(--ui);font-size:14px;font-weight:600;cursor:pointer;
@@ -309,6 +358,136 @@
   .vhost.unknown{background:var(--line-2);color:var(--faint)}
   html[data-theme="dark"] .vhost.mt{background:rgba(125,179,232,.18);color:#7db3e8;border-color:rgba(125,179,232,.35)}
   html[data-theme="dark"] .vhost.pbx{background:rgba(125,179,232,.18);color:#7db3e8;border-color:rgba(125,179,232,.35)}
+  .verdict .vqos{margin-top:12px;padding:12px 14px;border-radius:9px;background:var(--ink-2);border:1px solid var(--line)}
+  .verdict .vqos-head{display:flex;align-items:center;gap:9px}
+  .verdict .vqos-t{font-size:12.5px;font-weight:800;color:var(--text)}
+  /* Media QoS tab */
+  .qos-intro-h{font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px}
+  .qos-intro p{font-size:13px;line-height:1.55;color:var(--muted);margin:0 0 14px;max-width:760px}
+  .qos-paste{width:100%;min-height:150px;font-family:var(--mono);font-size:12px;line-height:1.5;
+    padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--paper);color:var(--text);resize:vertical}
+  .qos-paste:focus{outline:none;border-color:var(--signal);box-shadow:0 0 0 3px rgba(14,122,95,.15)}
+  .qos-actions{display:flex;gap:9px;margin:12px 0 4px}
+  .qos-empty{padding:16px;color:var(--muted);font-size:13px}
+  .qos-empty.err{color:var(--alert)}
+  .qos-card{margin-top:16px}
+  .qos-scoreline{display:flex;align-items:flex-end;gap:26px;flex-wrap:wrap;padding:14px 16px;background:var(--ink-2);border-radius:11px;border:1px solid var(--line)}
+  .qos-scoreline .mos.big .mos-v{font-size:20px}
+  .qos-scoreline .mos-l{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin-bottom:2px}
+  .qos-scoreline .mos-v{font-size:20px;font-weight:800;line-height:1.05;font-variant-numeric:tabular-nums}
+  .qos-scoreline .mos-v.ok{color:var(--ok)} .qos-scoreline .mos-v.warn{color:var(--amber)} .qos-scoreline .mos-v.fail{color:var(--alert)}
+  .qos-scoreline .mos-w{font-size:12px;font-weight:700;color:var(--muted);margin-top:2px}
+  .qos-src{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--faint)}
+  .qos-blame{margin-top:12px;padding:12px 14px;border-radius:10px;border:1px solid}
+  .qos-blame.fail{background:var(--alert-bg);border-color:var(--alert)}
+  .qos-blame.warn{background:var(--amber-bg);border-color:var(--amber)}
+  .qos-blame.ok{background:var(--wire-bg);border-color:var(--ok)}
+  .qos-blame-h{font-size:13.5px;font-weight:800;color:var(--text)}
+  .qos-blame-b{margin-top:5px;font-size:12.5px;line-height:1.55;color:var(--muted)}
+  .qos-blame-b b{color:var(--text)}
+  details.qos-blame-more{margin-top:8px}
+  details.qos-blame-more>summary{cursor:pointer;list-style:none;display:inline-flex;align-items:center;gap:5px;
+    font-size:11.5px;font-weight:700;color:var(--muted)}
+  details.qos-blame-more>summary::-webkit-details-marker{display:none}
+  .qos-blame-caret{font-size:11px;transition:transform .15s}
+  details.qos-blame-more[open]>summary .qos-blame-caret{transform:rotate(90deg)}
+  .qos-blame-detail{margin-top:8px;padding:10px 12px;border-left:2px solid var(--muted);background:var(--paper);
+    border-radius:0 8px 8px 0;font-size:12px;line-height:1.6;color:var(--muted)}
+  .qos-blame.fail .qos-blame-detail{border-left-color:var(--alert)}
+  .qos-blame.warn .qos-blame-detail{border-left-color:var(--amber)}
+  .qos-blame-detail b{color:var(--text);font-weight:700}
+  .qos-recs{margin-top:14px;padding:14px 16px;border-radius:10px;background:var(--signal-bg);border:1px solid var(--signal)}
+  .qos-recs-h{font-size:13.5px;font-weight:800;color:var(--text);margin-bottom:10px}
+  .qos-recs-sub{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:0;text-transform:none;margin-left:6px}
+  details.qos-rec{border-top:1px solid var(--line)}
+  details.qos-rec:first-of-type{border-top:none}
+  details.qos-rec>summary{display:grid;grid-template-columns:22px 96px 1fr 16px;gap:10px;align-items:start;
+    padding:8px 0;cursor:pointer;list-style:none}
+  details.qos-rec>summary::-webkit-details-marker{display:none}
+  .qos-rec-ico{font-size:15px;line-height:1.5}
+  .qos-rec-own{font-size:9.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--signal);
+    background:var(--paper);border:1px solid var(--signal);border-radius:999px;padding:3px 4px;text-align:center;line-height:1.2}
+  .qos-rec-tx{font-size:12.5px;line-height:1.55;color:var(--text)} .qos-rec-tx b{font-weight:700}
+  .qos-rec-caret{font-size:12px;color:var(--signal);transition:transform .15s;text-align:center;margin-top:2px}
+  details.qos-rec[open]>summary .qos-rec-caret{transform:rotate(90deg)}
+  .qos-rec-detail{grid-column:1/-1;margin:0 0 10px 32px;padding:10px 12px;border-left:2px solid var(--signal);
+    background:var(--paper);border-radius:0 8px 8px 0;font-size:12px;line-height:1.6;color:var(--muted)}
+  .qos-rec-detail b{color:var(--text);font-weight:700}
+  .qos-legs{margin-top:14px;display:flex;flex-direction:column;gap:10px}
+  .qos-leg{padding:11px 13px;border-radius:10px;border:1px solid var(--line);background:var(--paper)}
+  .qos-leg.warn{border-left:4px solid var(--amber)} .qos-leg.fail{border-left:4px solid var(--alert)} .qos-leg.ok{border-left:4px solid var(--ok)}
+  .qos-leg.worst{box-shadow:0 0 0 2px var(--alert) inset}
+  .qos-leg-dir{font-size:12.5px;color:var(--text)} .qos-leg-dir .faint{font-family:var(--mono);font-size:11px}
+  .qos-vlan{font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:var(--line-2);color:var(--muted)}
+  .qos-worst-tag{font-size:9.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:1px 7px;border-radius:999px;background:var(--alert);color:#fff;margin-left:6px}
+  .qos-leg-stats{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:9px}
+  .qos-leg-stats .qs{display:flex;flex-direction:column;min-width:64px}
+  .qos-leg-stats .qs-l{font-size:9px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
+  .qos-leg-stats .qs-v{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--text)}
+  .qos-leg-stats .qs-v.ok{color:var(--ok)} .qos-leg-stats .qs-v.warn{color:var(--amber)} .qos-leg-stats .qs-v.fail{color:var(--alert)}
+  .qos-leg-meta{margin-top:8px;font-family:var(--mono);font-size:10.5px;color:var(--faint)}
+  /* Compact dashboard QoS strip (reflects Media QoS tab) */
+  .verdict .vqos-mini{margin-top:12px;padding:11px 14px;border-radius:10px;background:var(--ink-2);
+    border:1px solid var(--line);display:flex;align-items:center;gap:20px;cursor:pointer;
+    transition:border-color .12s, background .12s}
+  .verdict .vqos-mini:hover{border-color:var(--signal);background:var(--signal-bg)}
+  .verdict .vqos-mini:focus{outline:none;border-color:var(--signal);box-shadow:0 0 0 3px rgba(14,122,95,.15)}
+  .verdict .vqm-scores{display:flex;gap:22px}
+  .verdict .vqos-mini .mos-l{font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+  .verdict .vqos-mini .mos-v{font-size:34px;font-weight:800;line-height:1.05;font-variant-numeric:tabular-nums}
+  .verdict .vqos-mini .mos-v.ok{color:var(--ok)} .verdict .vqos-mini .mos-v.warn{color:var(--amber)} .verdict .vqos-mini .mos-v.fail{color:var(--alert)}
+  .verdict .vqos-mini .mos-w{font-size:11px;font-weight:700;color:var(--muted)}
+  .verdict .vqm-side{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:6px;text-align:right}
+  .verdict .vqm-badge,.verdict .vqos-badge{font-size:10.5px;font-weight:800;padding:2px 9px;border-radius:999px;white-space:nowrap}
+  .verdict .vqos-badge.ok{background:var(--wire-bg);color:var(--ok)}
+  .verdict .vqos-badge.warn{background:var(--amber-bg);color:var(--amber)}
+  .verdict .vqos-badge.fail{background:var(--alert-bg);color:var(--alert)}
+  .verdict .vqm-link{font-size:11.5px;font-weight:700;color:var(--signal)}
+  .verdict .vqos-mini.empty{gap:12px}
+  .verdict .vqos-mini.empty.alert{background:var(--amber-bg);border-color:var(--amber)}
+  .verdict .vqos-mini.empty.alert:hover{background:var(--amber-bg);border-color:var(--amber);filter:brightness(.98)}
+  .verdict .vqos-mini.empty.alert .vqm-empty{color:var(--amber)}
+  .verdict .vqos-mini.empty.alert .vqm-empty b{color:var(--amber)}
+  .verdict .vqos-mini.empty.alert .vqm-link{color:var(--amber);text-decoration:underline}
+  .verdict .vqm-empty{font-size:12.5px;color:var(--muted)} .verdict .vqm-empty b{color:var(--text)}
+  .verdict .vqos-est{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+    padding:2px 8px;border-radius:999px;background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber)}
+  .verdict .vqos-meas{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+    padding:2px 8px;border-radius:999px;background:var(--wire-bg);color:var(--ok);border:1px solid var(--ok)}
+  .verdict .vqos.measured{border-color:var(--ok)}
+  .verdict .vqos-note.ok{background:var(--wire-bg)}
+  .verdict .vqos-note.fail{background:var(--alert-bg)}
+  .verdict .qos-jump{color:var(--signal);font-weight:700}
+  .verdict .vqos-scores{display:flex;flex-wrap:wrap;gap:10px 22px;margin-top:10px;align-items:flex-end}
+  .verdict .mos,.verdict .mos-codec{min-width:80px}
+  .verdict .mos-l{font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+  .verdict .mos-v{font-size:26px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
+  .verdict .mos-v.ok{color:var(--ok)} .verdict .mos-v.warn{color:var(--amber)} .verdict .mos-v.fail{color:var(--alert)}
+  .verdict .mos-w{font-size:11px;font-weight:700;color:var(--muted);margin-top:1px}
+  .verdict .mos-cv{font-size:14px;font-weight:700;color:var(--text);margin-top:3px}
+  .verdict .vqos-note{margin-top:11px;font-size:11.5px;line-height:1.55;color:var(--muted);
+    background:var(--amber-bg);border-radius:8px;padding:9px 11px}
+  .verdict .vqos-note b{color:var(--text)}
+  .verdict .vinit{margin-top:12px;padding:9px 13px;border-radius:9px;background:var(--signal-bg);
+    border:1px solid var(--signal);display:flex;align-items:center;gap:9px}
+  .verdict .vinit-ico{font-size:15px}
+  .verdict .vinit-k{font-size:9.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--faint)}
+  .verdict .vinit-label{font-size:14px;font-weight:800;color:var(--text)}
+  .verdict .vcid{margin-top:12px;padding:12px 14px;border-radius:9px;background:var(--ink-2);
+    border:1px solid var(--line)}
+  .verdict .vcid-main{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .verdict .cid-name{font-size:16px;font-weight:800;color:var(--text);letter-spacing:-.01em}
+  .verdict .cid-num{font-family:var(--mono);font-size:13px;color:var(--muted);font-weight:700}
+  .verdict .cid-badge{font-size:10.5px;font-weight:800;letter-spacing:.04em;padding:3px 9px;border-radius:999px;
+    border:1px solid transparent;white-space:nowrap}
+  .cid-badge.ok{background:var(--wire-bg);color:var(--ok);border-color:var(--ok)}
+  .cid-badge.warn{background:var(--amber-bg);color:var(--amber);border-color:var(--amber)}
+  .cid-badge.fail{background:var(--alert-bg);color:var(--alert);border-color:var(--alert)}
+  .cid-badge.neutral{background:var(--line-2);color:var(--muted)}
+  .verdict .vcid-note{margin-top:7px;font-size:12.5px;line-height:1.5;color:var(--muted)}
+  .verdict .vcid-meta{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px 16px;font-size:11.5px;color:var(--faint);
+    font-family:var(--mono)}
+  .verdict .vcid-meta b{color:var(--muted);font-weight:700}
   .verdict .vdevice{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px 14px;
     margin-top:12px;padding:11px 13px;border-radius:9px;background:var(--line-2)}
   .verdict .vdevice .df{min-width:0}
@@ -583,14 +762,25 @@
     <img class="logo logo-dark" alt="COEO" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAACECAYAAAAqRRZCAAA1uUlEQVR42u2deZgkRbX2f1XVPUOzJZAsIYOAiKyyXFmUBhRxQyEFxeUCCojox51WRGQRNBFusigC6sUWRRQRZN+TRVAQWVoGAXGQfd9zYAqomYEeZrqrvj/ixHRMTlVXVXdmVXV3nufpp2e6qrIiTrzxxokTJ86BTDLJJJNMMskkk0wyySSTTDLJJJNMMskkk0wyySSTTDLJJJNMMskkk0wyySSTTDLJJJNMMskkk0wyySSTTDLJJJNMMslkMktuIjU2KpZy0uZcg22vmB/lOpXJNHCZLkb00D8w2LQe+np7MkxMQEzkOnwA8pbyh8er1KhYKsizyhNpkCwg5qXdwwk8r2CBtTxRJqUfRnnRA4GnhhIguwJAX29PeSLpYapiIteBA2EAuQxBRcXSysAMYF1gbWBNYBVgeaBLiGgQmAe8BswBngNeVq4zp8p3dckAlTuNvARAeSCnXGeoyutrWbpQwBrAysBy8rnFoos3gFeBly1dzK+h846ctIakqhGUH0arix7WA9YSTDiWHoaBt4GS6OEV4HngpcBTb9YgsHLgqXKHElVhFEysWQUTDjBdyGhIdPGmzI0lulCuM68GgXUUJnIdNjmXYvaoWFoH+CCwI7AtsKEMRLPtflMm62zgbmAAeNBelYS8httNXAYoNiCFULYAeoEdgC1lgq7S5OPLQAQ8AdwL3Anco1zn5SpWbVtJXMgjH3hqOEZQm4oeeoGtgPcAq43hK+YATwH3AXcBdweees7WQ//AYE4sr07ERA7Y3NLFlsD6wKpNPr4imHhSMHEXMEu5zoudhom2E5YhqhhxvA/4LOAB2wAr1ph45Qb7V6jx2kPAzcA1wJ2mDbKCtdwkNqCw2pEDdgL2BD4l4Kw2XsMCunqyZCsVk/nAP4FrgVC5ztOx1bylIDVWjm1N+WG0PbCX6GFLsaaT1sPbwP3A9cA1gacesb6/0A7iqjE/ei1MbFGjL+PVxQIh8hC4VrnOE+3EREcQVlQsFazJOQ3YAzgI+JiY83Hl5yzlNttu41w0JBQH/L+BPwF/MtZGqwYmDsqoWFLAvsBXga1jbx+ygJYbhx4qlk4LsUl7M/A74EabxMfrI2mWqPwwWg34MnCAWNnVJuRY9YCFh2p6WAT8DThXyGuhIa64xdcKiyoqltYA9gH2l0U8aUwwii4WAn8Ffg9cp1xncasw0RGEJZZERblOJSqWegSQfcD7Y4OQswYhabEJrGB9RxG4APilcp0n0x6YGGmvL3o4QHwPpp3D45yYjU5cYkD9F3CmkPgiGTfSsDxtIvDDSAH/A3xd/DE2Jlqhh0psQXsU+BVwbuCpBcanlpaPK4aJdYCZspCv1QZMxHXxH+CXwB+V6wwax38rdyO5FhJVfNX4CnAMsJm1apIiSdXz7VSsCTsf+DXwU+U6ryU9We3nRcXSasD3BJirWLrI1TDX0xQDVPu7/w2cpFznMuPrq+bwHYdVlQs8VfbDaEXgUOA7aMd5J+jBJvEngB/39facq1ynkvQ20Z78UbHkAIcD37L8c52ki4eBU5TrXGAwQYv8v7kWkVXeTPaoWNoWOBX4aJsHotbgDFurykvA8cp1zknK2oqtoAcA/4s+1TFWRIHOOAyJk/iNwPeV68xOYmWNWVV7AycBG3eoHsoWJu4Cjg48dVdS1lYME/sAJwIbTABM3AocpVznvvg8n7CEZQZDWPgHwLHAtA4jqnrEdQNwqHKdp8ZDWpYu1gN+gXaedhooRwPpoBD4qeMhcD+MugJPDflhtAbwM2C/CaaHMnA6cFzgqYWmP2PERJdynaGoWJohuvjiBNPFIllsThJsp+rbyqVMVmYw3od25O5sWVUFOl9sP1cR+JZynYttP9wYzP29xSeyZoeTdlzsMbsZ+IZyneeb2SLaoQp+GH0COBt9FD/R9GDcFvcBXw889e9mSSuGCQ84S3x2ExUTtwMHK9d5Ikm3QcsIyyIrD33CsHqHrxqNDsxPlesc1agJHNsOnyx+u4lE2rUsz5eB/ZXr3NIIQGWCIv6fI8UtYCyJLiaemHbPBw4JPHVho36t2MHTccAJE1gXNibmAl9TrnNdWqSVS4GolhzTR8XSobL1magTtJa1dRXwVeU6b41GWuY1OQ39I/CF2Ao9UcVMrGHgEOU654zmeLX0UOgfGDwL+AYjjtz8BNaDjenjA0+d4IdRfrR7ipYupsmu4yuTUBeHKtc5M43QoFyKZHWi+Kwmw2DYshjoRjtfPeU6b1Tbt1vAXBW4Gviw9dnJIOY0MQccq1znlGqrqtGDH0Y9wCXogOCJamnXW8jOCjw1sxZpWZhYCbgC+MQkxISZ6ycp1/lh0qSVNGEZp/Jp6KP6yQTMahbGvcBuynWKsa1f3gpZuAl9rWgyAbPaZD1Buc7xNmmZbWD/wGAP+kbBxyexHsy26NzAUwfFJ6qFiZXR0fQ7TQFdnKZc58gkHfG5BMnK+KxOAb4/gX0TzZLW3bJSvhV7fUXgL+go7cmsCxugP1Cuc7LZHkralwL62s9uk3SCVrO+fxt46pvGEW9lVpiODg/5yBTQhcH8Kcp1jk3Kp5XINs0iq8OnCFkh/RsCPgRcxsjJjvm5bAqQlVn0TCaAk6Ji6WAB5jSJT/rDFCErpH+LgW/4YXSKhG50iZukDFw4RcjKnh/HRMXSd4UfupIAW1LbwD3FVzNZt4H1VtWzlOvMFJ2cjXYsTwVgxreHOdkm/8UPI2NtTzU9GIvzG4GnTNDxz4DDprAu9lKuc814t4fjIhVrX74xcA8jmRXyTC0xVtS+AsbzpoiVGZeyjP3z/QODZwI/ZeKfDo+HvCvA1n29PZsBl05hTOTQ4R/bKdd5fDwR8WMmLCuHVQGdX2qbKQpOA1BjbeUsCzM3RXVhnO2VKaoDm7xf7OvtWRGdSI8pqg/DC/ehc3cNM8aTw/FYQsa0O1HIamiKkhUWOU0TCys/hSdqLrY9nKqSR+eOXwd9qT03hfVhfJzbAIHwRmGs4BqLdWX8Vh9CxyPF07S0aiW3f6oRSDtutrdjFS3X0UPbJkv/wGC7tmIdoYe+3p5ym/Tfabqw0+LsqFzn7rH4s8ZKWOYkbBbwgRZuBcuWqd0oGQ0xeubRie4j6UpRdxOBtEwyv0YXTHvipKqHvt6edmy9mtFFqzFhbw0/xBjyxTftALSsq4NbSFb2hVCj2DeAZ9FJ9IvozIjd4itYB32pdu1YHyf6tRg7UNPW+UuiixfRBTgWAz2Ai879vr7oJW8BFSbHVRBbDxE6d/8L6Dz+i9CxT6uhU/iY/O9dMcu0MIHJqhYmXrZ0URJMLCeYWJeR/O+txERBxm0b4CDlOmc3a2XlmiQr8/6VgEeAdzGSqjYti8pW4uPoiOmb0EUkXh2lrSsBmwC7oK+D7FwF7BNxghqQ3o7OuX0b8JhynQWj6GItdMGG3dD58t/bagJP0Moqx/B2t2DiNuCRwFOlWh+UCjtboAN99wI2TWuytoiw4ji+Cx2kexvwaLwSTgwTa4ouDCY2ahFxmS3yy+jknfNBX4pPg7BMgOgRpH9kbT/7TnSuoBuU6yyMW3yxflQt2xUVS9uhUxDvx8jF3YmW4mYx+hL1WSZpWmwxiZNPpcodxx50Hq7DGMmVnrouEiIs084KcBHwK5NIz9ZD/8DgMnqIZ1Hww2ga8GnRwy5J6qHFZDWMDkjtV64za4yYWA7YXXSxUwswYZ59pHKd05qJgs81QVbmvSuIdTUjRevKdOhZ9MXai2zSpIFagrFCk8PWna7tgB8Du9I+J3kzZGXadpPo4n6rfyaZXKUBXSxT4zAqlg4CAtk6dzJp2eN0O3BM4KkBi6AK1Uipmh4MmcWq8nwJOAWd5XPcekiZsGxd3IbOAjsrQUzsh07It16KmDBW1kuyC3q7USurGcIy1tXX0Pmt0uiMbU1cDHxbuc7cJOqiVSmj9X0ZmDxjO4JPm+TM1mcInYb2ZxZhj7m4pQXUsuRjmoFOKPjZtElrjIRlbwH9vt6ek0xOdaAy1vTEFnlVJKf8quiiG/uxdCaKTiIro4sK+t7mKdYuo5IAJioSCL4G0I/OfpqW28Bg7WvKdf7QqJU1FgtrQLYS5YTBbZPVccp1Apsok/oSe3CjYukzsrVYucMsKwPMIvBlSZKXeNWaWGaFnwBHpe3XapK0jB7eAvYNPHWtKXCaZLktO1uoH0bHACePVQ8pEpbRxXxgH+U618cX4RQwcTzwo5QwYZ45Cx1MmpyFZV3B+S90SpWkYzjsO0d28q/UCppGxVK3cp3FUbG0A/rahBvbgo2mszL6RLI7RWDOBT6lXOd+09aU9GBX8PmhbBFTu0LSBGEZ8C4A9gg8dbsfRt2Bp9LSw5K6iH4Y/Y9YnU1P1JQIy1h884BPK9f5RwswkZNogMPR+evTuCNsYge3Ua7zQCNXdholLLMdNCl+kwa0eZ6vXOfEqFjqBoZaUMTUhGishj72LzdAVlg+pY1Y9tQqCStzEbCrBNelBsyY9VyQMf4pcERapNUgYdl+mt0DT93gh9Fy6EOHNCUHdElhCWNpNTy+KZGVwUQZfan81hZioksW9ROA41Kc9ycr1/lBI7upXBONzwEPoI9Ck5ykZi97sXKdfVpZ48y2Hpv8zKbA7BRWHKOL/ZXrnN8KYNYgrRvRx92p+LQaIC2zxTk48NQf2rUv98PoTHRtwIb0kBJhme8+RLnOb9qIicuBvRPGhOGRB9FVzusWdsk1OqGjYmlzdFHNsZaLH83UfQHYkpGYjHIrgWkRcj0xOX6OQp8qJbniGCCcr1xn/zQrj9TZClTQVYYfRAdZJn6Fow5hGRA/JmQxnepXTNIUo4cVgHPE+q7rLkiBsAwmrlSus3ebMbGqYEJZOkrSgtxSuc7D9QyIrgYHr4zOSV5IeJKasIjvKtcppV3TrJYIq1caGLwhIe9dEiRtWw9zgcMFJOU26KEskyKKiqVjgN/S+ng1MxE2Qmdsbbc0FPqSAlkZgiwB35FFtZ2YeD0qlr6HPqRKco4a3/WH0RWlR8V+vokB2yml1eMO5TpXtousmrHCrAIC/5XwKmMszVOV68xlJEMlbQDokBDmubLtbQt5MnK40c6fdqbHMQ7/XyjXeVG2Zu3ERAFdRORuRgJWk5SdY3zTPGHJJB0WAG+d8CQ1QPgxE0NMezdGF0FNCszmLturwNmykrabuPOyePyUkXQxiUkT1ki+zT/tIitzqf1N4Jcdgomc7ER+kvDuwvDJ1rIdHLZCqMZkYSH71vUS9l0ZP8Vf2mXujlGxW1grYFIrKcBFynVKspJW2txXA5qr0He+Ci32IU11MZi4QrnOa7KAdAombgSeTtDyNnyynuUfG5uFZb2+PtoBmZRVYTp6uZx4dMIkbVQ2aWKVHEb7/EYjN+MfulQA0XY9yFjkleu8hb5MmyRBZ9L44njxaNZGGzBRUK7zDnBlbB6Phv/hOpg2mF9BeGZUXqpHWDmLsOo1cCwDclMj+9YOEdPGDZrwSRXEtDcWSqXG+54D7hNQdIylaa2oSboCMmls9zEHmNVhmDD4/XMdTAxb+DehP8MNGDDr19vFNQrCdRIkFnMiVkQfk0LnbwftNq5dR6kGcAtlYM8D/sFIeEClyjPvVa7zjhw8dAp5m5iY+4FBRo76M4lJwieERscPKNeZL36dSofNgdno08t8jUW4IJi5XYySV+q4FczfZ9RrQKPhCWsk3OkC8JRynTfFsd/RE8G0USwOdxTCMmR1L3CAcp2HrWfsjk4NY8f0mJVodr2VpY2r6SvorBnxqP7xjtlkym9eSVAPQxYpQPtOaatuC2UOzAWeQudYszFhrqzdAHxHuc6Tgv1V0LGLxzB60PmaSRHWKikM7vPWgEwU/8hysteu1S8zmJ9VrvOKlQonJ5dVD0LXbjRi/FcvdlpHBZzm1OYNls1omUk6YnT8Uoe2z2BibhVMFICHgM8p11kkoRAo13kTODYqlhxgJrVj++ryTFeD5LJ8Ch0vTsCVdjojF55zVfbtXegrRq9ExdI05TqLLAurIIUkPyv6tNPz3mE9oxMthyOBd1sWIegalGP1a+WAd2TbMNEtrZwsYvkxfnYROh9UztJ5QdwInYgJY+356Fg9UzPBWFf/MmRlpXIy28GfAgfJPKp2gLd8PYu1UQsrjZv770xAcOYbsDIeqxapbuLZlOuEo1k1nWZlye+BzPCpLUELxqADMXEPunhyLReKTbQm99or6MOE9aieg64uzzRTcSVpmYjluhu5wrOeRMQXYoNo7mRuJH2vWCT4nDhYO8qfZ/nuTG29cgw7Y7aO+gcGy0ySUIm+3p7x6KKaHvLA88p15nUwJtZG+3OHrbnRhT7xXhAVSzbZ5sT3taK17aumr+GkCCuNOk2r1DP/OlAWMZLiJG7SmhOT/46KpUDAZogpJ2k6Poy+H2cf9XajS9xfxMhdzU6yKIfRdwp3k753JbiVnyzFVnMJ6mFIMPFN0XunYuL/0NkbDCZMu81F7YIVQ5aXbeKX0IdOtXxYC+vps6vBgSilMLjrpGi9pSWD4m+oNZBl6delUbF0oHKdyFqZtgPOR1eHNmRnyHq9TuysdU3CHDcnnU4ni+1aVg/5TsaENV/fHcNEt7z2+ahYOsakb7bw/0n0NbzRTgnr8kyjFtbcFAhrw6hYWkG5zludHtpgjnNlS/d6HeCVgU8BD0TF0vXoqy3vR1cl6WbpvNzmZ/NOszatMVkjNnmSLNwxWeK6cgnqwWBis07FhJz2vacGJsrAyVGxtAc6vOFtYEexxqrtTGx5LSnCSvKI1UzWd6GvudxHChdsUzSF51grTX4U0loLfSISB6adT8xcsN2mA7NVmP6+H53zPsmkjUlN9MkicddCDvhAVCxNl4DiTlnQDSY2lYWsWtUsQ1q98hPH/2hj/vJ4TXKjpOcSNuHNxNx1Am0NjKKfbYKUhxi5S1htsMz7NhIQLMmx3kH9/cQE3Lq3VBIsEmtjYl1gK6uiTSdh4uOxeVyL2OrhP85Dz9azKhslrGfRYQhJXc8wDf/CBJwMjzTRxy5G7hLmRiHvAvC5DiPvYQl83WsCLSqTRUy8295iWeU6CBM54PMNYKLQIP6NlfZOkoT1IiPR2EkQlgkk2y4qlrYHKvEwgA4U0++HrD4ktaIC7B8VS9MsULTTV1GwLOBNUtoONjJphybQT5JbNqPrfaJiafkOw8SO6ASWSWHC5piXxkVY4mArSAqY/yRIWPYqcuQESS1TtiysEsn53Yz5vCHwRZPGo92dlXYclfCYN7OFslfoifCT9OnpMPok7qsdhokjE8aEmVcPSujPqAkAGnG6m4G4C9gzwYZ2SWM/FxVLH1SuM6udjmfxHdXNwAq8ATxKssVkDfn9KCqWrgAWt8vRapU+2w34GMkXzG101b0CXUC1kjBh5tAnV8WESMbE030pYWvUYOLYqFj6E/B2B2BiZ8BLCRMDMb4ZM2EZBf094a2QeXYBnQb2Q0hEbKsHxarUUW7w/VcJYSXVTrOivg84VrnOceI/anWFlJz8Xg74Ge05uTU+vScCTx07UZxOfcXSAuDUBAnLYGJd4ATlOt+TQOTFbcJEFzpYNOkT/UKMXyrjJSwzif8NPIOOv0hqUEwy+21lUH7Y6kGxVo8t0YU2Fo3SNxOyMKORLfUYAXpMVCzdpFznrjaUdTKFM/9PrIVWV8wxmCgDx/hhdG/gqSuliGor9ZCPjUmlznvLwN+sBThJXQwD342KpT8r1/lLGzFxKrquQxp1CZ8RfqGe0dBs5eezgENIvtSXMTG/pFznslYVi7T6tQH6dvyatFfMAL4EfEi5zout2iYbnUfF0sHoKyHtrvxcQfsKdwo89bAfRl2Bp1KfqH4YFQJPDcf/BtDX21OuZv2bgqPoHFabkuwhhbm28xrQq1znqVaRloWJfYE/MVLJJyl/ncHYWcp1ZjbSr3wTpAK6zE/SlkXOWqXOj4qlT4qSutM8GZHBGIqKpXcB1wtZLaKxE6G0CMSs6DOA66JiaXWx/rpS1EPOAubewG/aZFlVW0hXBa73w2iDwFNDfhh1p0xW3YGnhv0w+pgfRn/1w6jPD6O1A08NB54aVq5T8cOoq0qsXEEmWiO5zseCibLg8/qoWFpbcNvdIkzsDvzBIuE0rmZd2sh2kGa+XMijS1aRjake5ZqEdbEQ2E9qFeYh2UrQsfLb70MXWdikAyZpNT/ObGBP5TrPCmkNJ+nfk6Nqk/pjf+D3JFvZe6wWVlwPzwJ7Bp6a7YdRV19vT6J68MMoD+SErPYALmYkUeObwHXABcAtxsozn+nr7SkzktRuM9naFFLQn9HF44CnXOfxlDCxZM7JZeXzGckukvR8z6EPsLYChhrpRzOEZbZPR6Frk6WxZbCD5H6oXOcky+FXHg9x2UQl/98D+J2sXJ1EVnGAvgQcpFznZksX4wKpgNLUnCygUzodQ7L3BMdLVnE9vAkcEnjqEiGMcRNXVCzl+wcG8xYJHYm+oJtnJDGdjYuHZJdxSeCpx+25wUhGjr+Q3umq0cWrwMEmt1qCmMhb8+M44IQUMWH44yjlOj9tdJvbDGGZfE5roesJrpxSR2wF/RUdp/WAZRGALpBQbpCkzIphsh+uDhwHfDtm2XWi2ER6BnCScp3XY7ooNwJUQ1K27qJi6YPA6ehgQLPipbYNH8cVFnuMfg/4gadebsS/VA0T/QODeQDjq/LDaHP0Cd9nqkzQiqUb04aFwC1ifdwYeGqehbc90fUc01oEbV30ow+rXhsnJuz58QF0ZtBdU8SEaVsJ2ES5zhzrpD4ZwjIKkVX5DOC7aTlmY5P1HeAc4JfKdR6t4uisObC2AoSoDgAOQ6eASdWaSMF0NuXAzgAuMMRlr461wBF32kfF0hbAocDXGDmJStXCTOC+XcXalrwGnAn8zhCXRUY1+xG3yPwweh/wP+iDpJ4G9GBCX2zMvwBcDlwYeOpeacc9wHYp6tXG7kvAz4HzDHE1gAniFllULG0qi/jX0SmQ0sSE4Y0zJFyj4YOlZgnL3CWcATws+/w0V2Vbae+gy2ZdBtyuXOeFBtq7Kjpk4nPo+09rVXnuRBG7za+gAyuvQtczLDWgi/WBXYAvAp+0Jl1LLMwELwjbenhdfJBXAHcHnqqbBskPo7WBndH3WD/DSB7xZjBh1wq0PzMAnNPX2zMN+GWVLWWamHgV7fS/El027o0GMPFu4COCiU+hc62nPT/MwvMW+kT1ZdlOlxMnrJiVFQA/TNnKssFhK3CBOOseFofsq2Kmd6NPltZFO9I3Y+lQhaSPZdthbcVjfSLRwyOy2r8pY9IjfX8POt/WxixdTKRlukg4m0EtTBRFB4+gKzIV0ae+00UP68kE2dRyZyShB1Ph2J4Dr/f19qxEa9KAV9PFqzFMvC6YWE50sb7MjU3QaYtbiQnDF4EESDcVtjMWwjIW1Yro+4XrkPwJQjOrWiOT3AzoZMm/VLFWwWb6ZIDRUtJOgbAYxb/UTj0M2/hMuMBqo5jId4guRnNvvABsIYZHpZnDgqZJxqS7UK4zDzickYRdaYtd+toAtV6slCHSLiZXsric1ScD1NF0YVtmhUlCVjYm8g3qYThlPdj4NH1P+i5kPUzkOxgThrAOF/5o+hremKwicxyuXOdy8Sl10doKKDmLiGr9tMOiahU4q03a0XTR6m1wBRhOmazGoodWYSIX+3cuw8SSbfNlynWuGOsNjvFs4yrihJ+JPqnomJLabfQv5VpocXa6BViY4nqoAJX+gcFBmaxTfW6YK2czrcO7pmXMhCVe/ZxynbnocIGcZWZONRkSXR6LDsI0gYdTcpIC8/sHBs9j5KrRVNSDyfe2F/AD0cXiKaoLs5jvL3yRG2sQ+Lgc5eaem3KdW9CJvbqm4EQ1px7XKdc5RbnOccCtU1QXZpIeEXjqQHS4QWEKYyIIPHUzOij1evSp4VTVxRHKdW4VvhjzIjbukz25rtOlXOc04GwZlMVTbDD+DewXFUt5OUX9Evo2QKt9e+0UU1DzNOU6Z8vl3P2BWVOMvBfLHLgo8NRxfhiZw5F90XdDp6IufqNc5/Qkskwk4nSzrsCUZVX9nNXYyWxNmIu5H1Gu83zs4uiG6KRkazMxA1XHAsw/Ktc5wFwRUa4z7IfRWqKHjUk/Zq9T9PAXYA9gqK+3x5yql6NiaV3RxfpTCBNXooN08zR4ZShVC0uAae9T/9syfyerpTUkYHsB+JSQVUG5TlmAWVCu8yS6vPucSb4tMsC8FDhQSLssZFUIPDVH9PDUJLcujB5uBz4feGpRX28PynUqFiaeF128OEUwcT2wj/BCOYmsEokFe1qNWYy+BnOltWevTDKy6gKeBD4uaT6WOqK1wj4eRNf1e2ESTlZTd7EbfQnYAHNJIKCkaykEnnoWncHg4UlKWktZVoGnFsQv81qYeEx08dQkx8SVwgOLY/zQGYRltkIC2sViBp4tg2JHqU/0wegC/gnsUo2sapDWLmg/V9ckIXAzll3Az5Xr7C99WiZq2SKt54CPAndOMj0MG58V4AWeml8r84CFiccFE/+cZLqoSH/Olvm/mHGcCKZOWBZpIQ39f8D3GbkuMDQJJuglwK7KdV6qF/xmAfRpAeg1k4DATQhHGfi2cp3vWr67qpNOSCsfeOpVsTj/yEik/kQ9lDDXYArAyYGn9g089U69NCkWJl5Ep3C5lKUvok9kTOSBo2Xe52J8kIikmYI4x0gmxk+j84TPYOToeyJUErYvtg6jK9qcKv3LNzoY9nujYulHwPExX9hEuDZkX+V4Bp1U8LZmIpaFtMry78PQx/3dE0wPNibmAjMDT13mh1G+r7en4XtxMUx8HzjR8mtNREy8CHxDuc6f7Uy2SX9h6kqxMpWujS4TtPcEmaz2Kc5sYKZUssnT5IVNi8DNadGu6ORrm1T5rk6eoKCLERymXGfuWI6pJWdVLvBU2Q+jDwK/Aj4wAfXwZ+Bbgaeeqla4YgyY2Fl08f4JqIsrgEOV67ycdoGMlpCFvQpL7vAAnQKmE4nLTrExiE6Yd7JynbeTGAyLwFcGfoROmtZN9dQxnQTKp8TCvDQ+pmMRUwXHD6Pp4jY4Cp3+plq6lHbrwW7PHOD4wFO/ln6MiaxqYGIFdFT84ei0OJ2ICVsXz6NTmZ+fBCY6hrCqrCYucDQ62+OKVfbB7Z6cZtU4QZzmiQ5GjMC3lS3i7jFQtCtvVzyr5pvoZHSnKdcpjdXCrEFahVia4uPQQbd0wGIW14PJfHty4KmXky6QEsPEVoKJvToUEwuAs4CfKNcpJomJjiGsGgOzETpl8X6MJFUzq0rag1Mrv9Z1wOnKdW4z7U1jP277+OT/nwCOQGcDta09WqCLsjUhzILxBrq80/8p13k2rRXU5Fi3iGtn0YNn9blVeqiGiUF0FZ2fBZ56MCmrqkFM7Ap8D50ZlTbpwvY3z0NXD/q5cp0nWmVVtZWwagzM+sCBQlwbVplIuQQGqBIbhHi2yquB3yrXmSVtSrzEWA1dLPU94sv4BvBZwIkB1SbyXAJgrFSxah8VUJ4nJ1mkUU6qmh76BwaxnPLbiR4+B6zeBj08K0R1rqmQ44dRodFiFwljYgfgm+gCF6u2QRdPiu/yD/biRUqO9Y4jrNjA5CziWh4dVPdF+b12DR9TpU4f4kqstq2YB9wlW7/rlOvMqdamVlqeNgCiYmmGAPTzwAdZOpWtvY2tN5ZxXVXzh7yADnq8HLhVuc47VpsqaZN2fJsIVCziWhN9zeUL6Oo+K9fRQyOYqKWHOeiS85cDNweeml+tTS3GhF3l6F1iee4N7ACslKIuXkZXBroM+KtyncF2YaJjCCtGXHnboR0VS6sA26Pjlz6EzkG91ji+5k10Ecp7BJR3K9d5uRY42qiLJffwrL+tA+yELhiwvVihK4/na9A19v4B3Abco1xnvvV9qVtUDRDXkuKm1t/eJRN1FyHxjYBVxvE1r4pF+Q/0Hb9Zgadet76vSyyqcgfMj1wMEzOAXtHF9sD7YhZ5szIHfRNhiS7s4iZJ1AadNIQV3yrGJ6y85qALKmyIvjy6nmwVHHTBBZMw7h2xnl5Hx4Y8CzwBPGOsqDgQ2mHaNqiLQjWQyEq7gaWLGcBqsuJOZyQP1dvo2m9z0SXCjC6elRS1yxBlp+nCqiO4jIUjF6vfI5N1PeDdooeV0QUXTGDqoOihiD7ZWqKHwFNvVLHwaMXWL2FMqBgm1rEwUU0XNiaelPlR6nRMdGxwmkVeuaRWe2vAK51IUvUsUCHyoYSfOWF0YZFXLqly9VYtw0onklQ9q0ssr6EE51xHz48JU5jBqtaTj+3FK7F9eY5lHZATiqCaJPO4LuIFYuO6KNOiI+hWElhcD5LWBSAnueWX0UMzkekZJjLJJJNMMskkk0wyySSTTDLJJJNMMskkk0wyySSTTDLJJJNMMskkk0wyySSTTDLJZIqIuT2fSeJ6zUnAYzYumTQkbYl0N/e1RCqjRRxb0czEcxCZC7KMcpNe3mOAXamVx6jeHTI7H3m1idM/MFi1HXb74yL9Ltfoc8F636jXUKTtuXp9bIYIYm2ue22lWtR5oxeHo2IpV+vZnTQuNTAFUK5yz7FmltD482v10fp71fZY37FU/2p9brQ2mWfYeqn2vfYz0sgJNmFEQJD6M5td0f0wWs4Pow1btaLX0kOt767Wn/G0czRQ19LdaJ/xw6gQ/5z5vx9G6/lhtOI4xmWDVlpaUbGUr9XO8ViKY7VOW/09re5jNelqAzFNR6dJmYauW/ZaX2/PbMlpnbPyQeWU61T8MHo3sDU688DfA08NWa99AJ2p4KXAU/dX+XzZDyOTomYaOo3KzfFVPdam+00KXFldhoFL/DA6QrnO30wu8lgbN0Xfki8GnhqIvbY+urCAvVKZJGlPBJ563LzXarNC5z1S6FxVVyrXmVdNP/Idu6LTrpSBvyvXGRjNaqlj6Qz7YbS26GwDeek/wC3KdebHnysWznBULE3vHxj8CLCF6PEl4I7AU88EMX3LCj4MfBidtHG3/oHBXFQsEXv2NBmX6cC/Ak+9VGVcjhplXDYD3ltjXNaTttYdF0NWxtrww2hbdHobF5354C7lOvdaz+6RdudjO5ly/Pmij4+gsyo8FHjqafmOleQZAA/29fY8DyOl1OR7djBtCDx1h/X9O6ET/T0ReOpR6+8fZiSvWrxNrwWeuscPo9XReceGgYeU6zxj+m49YyVgYV9vz62tvn/Y1coVQTq3CjoNcbd5rX9gcLYfRgcr1/mnMfFlSzSEznV+Fjqf1XuAN63XfoTOzHkNsJeZCH4Y5WXinwwcEyPM3wOHAMOGIGRwr0Gn4fgqcIE8qxx4arEfRqsAV/thtFPgqQdN0QCrHTOBbwH/Aj4gZnWXEPJewM9qqOU04Mj+gcGCH0ZlafMu6EyXdu6vo/ww2ku5zuPWFignls05wAGxPp6oXMcfbbtUZXtkyPI44FCZCLY85YfRXsBD5rkmVbAfRl7/wODJjFR8MTLPD6PfAd9XrrOoCom+AXzKD6PfBZ76OtoaK1sTcxUZlx7p4x+bHJc+GZv7gW2srfYQOjniL2qo5Azge+a9ZsL6YfRe4Ex0ufmlLhn7YXRB/8DggUJ6M4AbR1H56cARsl0toDO8zkAXoDhZxrWMrqLzbuAa5Tp7+WGUN6Qui8otoptfAXdYffs1sLng7vD+gcF8VCyV+wcGL5DnVZM7gZ2FqM6U9z3gh9H2/QODhqh3QufKAjhDuc4taaWLriXtKvgwTxRTlEm9payWK/T19lRipuciee98ls0k+jYjeZ+WbEFkMn3GIqtn0FV2AQ4CDlGuU7b8RBV5/rC0Jy5voXMs3eiH0UbKdYZi26CF8tm3qnzWtH8QeA2dNO4V+T3XrHZ9vT0VP4xWFvCuJe35h+hqU+B8851+GHUJ0f4/i6weQleXBvihH0a7G1KpNyCSU70sZH6CkNUbAuL7RCfvBdYRIskZy8oPo68B11pW5P3A7eiEcCsD3xVSmS5WlD22ZmIe5IdRf+CpYRmTXIPjsiCBcVk4yrhgLX4boJMdflra94T8/yn5/8f6envMxxaLhRlZWF+EzuK51POtfgyjc7kBdAeeegtdCq4CfNwPo/VlITcL/X8LWb0N/NzSV7XnGXlW2lSU14elPXPEkkfyg82UcdkaOFjGuQv4iXzHU4AfFUu5vt6elib0a9cpiylddJiw+gKxnnZWrlOJOUPNKpSv0f74awbsu8mAPAFsEnhqe+Bc4DfAlaLs4SrPytWwRJesnH4YrSurSqGBNpq+vibEvCG6HuGGFtCMs3VL+Y4KsE/gqV6xBv8qE9+kTTHA/LT08e+Bp96Pzjx5PXASMKsRQFlW0sHA1+TP5wFbBp7aua+3ZzvZbt5lWcUFIdgt0WXJEaLaoa+3Z9vAU2ZreKq09dPACTLh8lXG8B1gph9GPwk8NWQfOLRgXOYCW8XG5QyZvEOWj+48dFK8+aKnrQJPfVQ+OxN4Tqxq+np7XpSxfJ/owBSf3RKdJfXnUbGUs6zfeB/N3y8Ssl1Bts709faYReir0odbAk89IYVcaz3PWLaetOmrjOS92l3+9k0LD9cJ5gCO98OoG52WuVee+aPAU2/3DwzmJ+2WsIbMDTw1yw+jBbK3XiPB08t5MigrAx8Hbgg8ddCSEw69FWrmeaZNG8jk2DXw1BzZZjRK0gsCTy0wVoY12Ob3fAuwO/phdGfgqYsEuEva7YeRvTIXAOWH0Q6Bp/6Bzn++5L0NOFTLaJ/LMfK9NwaeOtByZlcCT93nh9HHsSobybbkaMHQC8DugaeiPglVUK7zGnC0+GIOAfr8MDoz8NRLMgHsxaLb2vouCDwVWCfArRqX+fFxsch8D3SK6jJwSOCpCy03x1vAWX4YXWUeKNlyX5dnGOt/uK+353Xz7L7RHdhmu/28H0Y3oGsc7OeH0enKdRb6YfRRsX5AV1Q3JDXq1izwVEnaZGebLZnc9TE5GvgosKZsET8ouhro6+25kBZvBdttYZnv/YQfRmfIFuh14Nbxmpl9vT1lAd75sjqtBVzvh9GdfhgdYE6UmjzxMO25W0hlM3mmKwAsNNDXtYD7/TB6tH9g8D/9A4OP+mH0BfMemaD/QVcULgiB/MsPo1PEX1Gtzb+R3xsDd/hh9Gc/jPY0W5l6fbRWyK1lwueAU6JiKeeHUbflaM0HnloYeOpVsQyG/DBaXpyzFeCcwFORH0bTrIOAgvTpVNl2rShO9mq4exO4V/79v34YfU+sj0IDZAMwaxzjsgZwnx9Gj1jj8qXYgr67fNcDgacu9MOoyz4oEXKJAk8tsizXbiuDJ+hEgt0Se9bQvJPP/07GZVN0YRbQ1YQq6Hz0N1XZLdR6Xpc80zZUuqRNBSG1YenPA7IjQVwPhiCPbGeiv3YT1uGy1ckJqFcfrzLEN5ULPPWYWBuz5aUdgT/0DwxeLZOtmbJItom+v/x7GyCUvX0jS/l0Mb03lom1EfAui2grQtRfke8Zkm3y94F/+mG0rUUew/L7b+jCo0/LxPiU+It+I/6Uev0zr68jE6AEPK1cp9LX2zNkrcxlK8jTfGZV+ckB/1lirVkLh5BOhM6tX6ni8K1YvqwvCFkDnCa+sTl1MGom6cU1xuXtJsZlE2tc1o61bx3p54PxoqHKdSpyShrXtXlPpc7fai688s+/iX+yAnxZLNY9pD3nBZ5a1D8wWGhk3vQPDNZsU//AYMXGovTneDEkjJ7/FHjqH36brKt2+7AAHhAH7aCA5Do/jBx5PVflMw3FhBjfQOCp2/p6e7YWk/o2edkDjoo53RuVNQJPXS2+N8S3cz7LHhVX6+tc8RPsLz8HmJMkExgq4C8GntoXXSnoLJl0awPn+WE03YDJ6uNl4i86SE4pAb7ZPzC4nziLG9n2L5a2TwOmWfnCbbDnYv1ZJD+IjyVXw0Loltep4gQ2Mk1e21usJbPVOdTaJo8mq9cYl5UaGJeiWBD2uFwfW6iMw3+FUQJ9E41REhIpBJ5aDPxR+rALcLL0a4H0kaQd32ZuBJ56RfysBfm+H4k11zYLq10+LMPOPw48dYnsyUNZyT6qXOfqWABlBR1ykBeHY0FOhLprOZLF1P+v/oHBBwNPXS4+hlCskE8Dx/f19gwHzbV7SCybX/hhtBzwYzmtWWhZCrUmxluBp35bC5zS7hXFMZsLPHWXbFUelNOizYCNlevMlu0WQmRbA3cGnjrXD6PLgTuEwD4rgK40YDk+JpNyeeBjynV+74fRdD+MbCtria5kghbFd7Ua8FnlOudLuwpCcF2Bp97xw2hHsSRzwIMxndh46JFt5R7i8N0KfSy/sAG/5vA4xuXtwFNn1xn3R9AFXXf0w2jlwFPzLD+cKU9XGUvsWz0rS3R+ITqE593oUI0KcK34A1OrvCzj/JTlE54j2+C2Ob3bfRfLrND3CbjKMgGW0puAdTVg48BTwzIR8uhYk4psHWxgrinPvEH8D+YawWOMs0KuHP8vF3jqJ5ZfuzBOYJjP/xp9GvcT6+V/SnsrxjktfdlKfBjXAh+Qv89Hl7Fq6OBC+pLv6+15VL7X+JA2DTz1juh6WLagXxbyoX9gsFssvEsFQ3v5YfT1wFOLrc+844fRDPSJW050PxDfOtqkI5bjXHRp9seawWiNccmPlzDkn5eI/t8liwfS17L486b7YXRY/8Bgzxj8o6NaOrL9ehEdu1gRV0EO+HXakedCvtMsXbb7kK6tDSgDe0jE8ReEkHKW83VIGP5OIS0F/MYPI7Ov7hPfQw64ygCsT3/GxLqsBXzbD6Pn0LFF+8r7H5CJV7AmT5mRUt3V2mq/NiyR1cf5YbSC+OLKdfq6vB9G35WtjyGfuwNP3SPtGJaVHGArP4wOE//b8fL519AhGkaelu1iN/rouSKW1a4CrnsaJC4TMHoEOu5rBnCrH0a/EBLrEWutz5A/UJZ7er8UnW4BnC2EdrmsxtsD30bXyAM4LPDUQqSKsmXlGN2agMjuwFMv+2G0m2zj1xvFSkxiXHqqjMuswFOzjLUeeGq2H0anA0cAX5GCrueIb25d4DvA2n29Pb8Iqlty5QbaUQt7xtI5W/yVXcD9fb09d1mLV1PPa7BN8WeVG/G9TUYLK4c+Hs+L3+Vn4hDPAacLOPISRJiXo9iZoqwt0KXl/yYklwN+GXjqNgnwG5LPDAPHieWzufiKLhDLqwicGlvpc+JnqbWKLC+vmdWm0tfbY05Tvie+prysftX8M3n57jNkhf4VOsp6X/M8ac+v0cF9K4pebkHHqeXRcUzzzLYr8NSbwIkywXaS9/5c+vEY8NtGTo8sB/594usryeJwivgXbxKysi3iinx2gfgE75U2fk38P3ego7nXF1I9MPDUn6s4a7vkc0t8YJZen5Wt+yuMFAEd67gsHmVc1qgyLvvJgpY3cU99vT1HMxJC8DE5GLkD+JOQ86IaKu6W71l+lGEw/eiuNj7yz7/LApYDfl3HB9sT00tcCtbr9TigOz5GU42wFss250FxEt8j25oDAk8dERVLeePUsybTVehYqluFcEry+UMDT31btjXxz1wjhPBv9LF5UYjro4GnnkRHl9tO1Qdki/V6FT/LbDmpedE+WTFgDjw1E7iapa/TmM+/KpbTbOvnfmn/42YVk5PNIvBJ8bXNtfr59cBTZxkit/r4C3E0PybvjWQifVwilhvyqVjXbK5Bx9ucLdbcPHTE+33oayP3mLAT5TrlqFjKB556Dh2ucLS87w353JPA74EdAk+dV+Nk6Q10KMe99oQ3kdWBpx4R0hq0DjZsebDBcVFjHJclz0PHo31TSP1mcUMsQEevXwv0WfdB7ZO4V6SNs2tYKBXRwaOWa6MSO/AoSBDrxaKnSw25j+Jze8zWS+z3fGv+DdY5GHtN2nd/jQV56soo2QDy1r/X9MNoRr14KjvWxQ+jGX4YrVntNfu7x3Ib3xz3ix/jGLlIXfW5sZ98rSwG0uY1pJ+50dos7+32w2gdP4xWq9fe0cS+1iLZENaRcvCjjVk+9oy15HPLVXtuo3qVz3XJ78/IPcZlntXAuCznh9HRcpF6TONSA1Or+mG0rpxqjwnXsbYU6n2vH0ab+2F0YnxONPu8pObllBX7dGm098QV18hn4gOfRhqbWAqO/DiftUwb66VviZP7eADmh1G+2veZYMla/a8WPmEFj45LHwmNSy4prFbBYb6RO5tJ4Kza908laVvHq1xPaeZzORosrd3o++u1p96R9WifrwWwBp7XUD+b1Ukaeh7P+NR7X50kfS0dl7GOTxLvaXb8xoP3NNuWSSaZTHG3SSaZZJJJJplkkkkmmWSSSSaZZJJJJuOXzPeSSRKS1XXLJHWSioqlVZE7ohlxZTIe+f+45M4/ShxbVwAAAABJRU5ErkJggg=="/>
     <div class="brandtext">
       <span class="eyebrow">AI Enablement</span>
-      <span class="title">PCAP SIP Analyzer</span>
+      <span class="title">PCAP SIP QOS Analyzer</span>
     </div>
     <div class="spacer"></div>
     <span class="privacy" title="Files are parsed in your browser and never uploaded"><span class="dot"></span>parsed locally</span>
     <button class="themebtn" id="themeToggle" title="Toggle dark / light mode" aria-label="Toggle theme"><span id="themeIcon">◐</span><span id="themeLabel">Dark</span></button>
-      <span class="ver">v2.9.16</span>
+      <button class="ver" id="verPill" title="View changelog">v2.9.38</button>
   </div>
 </header>
+
+<div class="cl-overlay" id="clOverlay" role="dialog" aria-modal="true" aria-label="Changelog">
+  <div class="cl-modal">
+    <div class="cl-head">
+      <span class="cl-title">📋 Changelog</span>
+      <span class="cl-cur" id="clCur">v2.9.38</span>
+      <button class="cl-close" id="clClose" aria-label="Close">✕</button>
+    </div>
+    <div class="cl-body" id="clBody"></div>
+  </div>
+</div>
 
 <div class="wrap stage">
 
@@ -604,7 +794,19 @@
          entirely in your browser. Nothing is uploaded.</p>
       <button class="btn" id="pickBtn">Choose capture file</button>
       <input type="file" id="fileInput" accept=".pcap,.pcapng,.cap" hidden />
+      <div class="dz-picked" id="dzPicked" style="display:none"></div>
       <div class="hint">supports classic pcap + pcapng · Ethernet / raw IP / SLL / loopback · UDP &amp; TCP</div>
+
+      <div class="dz-media">
+        <div class="dz-media-h">📈 Optional — add a Media Summary now for measured voice quality (MOS)</div>
+        <p class="dz-media-p">Paste an Operations Monitor <b>Media Summary</b> to fold real per-leg MOS, loss, and jitter into the results. You can also add it later from the Media QoS tab.</p>
+        <textarea id="dzMsInput" class="qos-paste" placeholder="Paste the Media Summary here (optional)…"></textarea>
+      </div>
+
+      <div class="dz-actions">
+        <button class="btn primary" id="analyzeBtn">Analyze</button>
+        <button class="btn ghost" id="clearBtn">Clear</button>
+      </div>
       <div class="err" id="errBox" style="display:none"></div>
     </div>
   </div>
@@ -664,6 +866,18 @@
 
     <div class="panel" id="p-reg"></div>
     <div class="panel" id="p-calls"></div>
+    <div class="panel" id="p-qos">
+      <div class="qos-intro">
+        <div class="qos-intro-h">📈 Media QoS — measured voice quality</div>
+        <p>The call-signaling PCAP contains no RTP audio, so voice quality can't be measured from it directly. Paste an <b>Operations Monitor "Media Summary"</b> below (from the probes on the media path) to get the real per-direction MOS, packet loss, and jitter — and see which leg is causing any problem.</p>
+      </div>
+      <textarea id="msInput" class="qos-paste" placeholder="Paste the Media Summary here — e.g.&#10;&#10;SNT-SBC-3-4@172.16.61.11:13130 → MCP-MLT-15@172.16.161.65:11764 VLAN 60&#10;SSRC&#9;3734436778&#10;Reporter&#9;OCOM-RTP-PROBE&#10;Codecs&#9;PCMU (0)&#10;MOS average&#9;4.41&#10;MOS minimum&#9;4.41&#10;Packet loss rate&#9;0.00 %&#10;Jitter average&#9;0.04 ms&#10;…"></textarea>
+      <div class="qos-actions">
+        <button class="btn accent small" id="msAnalyze">Analyze media summary</button>
+        <button class="btn ghost small" id="msClear">Clear</button>
+      </div>
+      <div id="msResult"></div>
+    </div>
     <div class="panel" id="p-msgs"></div>
     <div class="panel" id="p-ep"></div>
     <div class="panel" id="p-warn"></div>
@@ -689,7 +903,7 @@
 </aside>
 
 <footer class="app">
-  <div class="wrap">COEO AI Enablement<span class="fdot"></span>PCAP SIP Analyzer v2.9.16 — offline, in-browser SIP capture analysis</div>
+  <div class="wrap">COEO AI Enablement<span class="fdot"></span>PCAP SIP QOS Analyzer v2.9.38 — offline, in-browser SIP capture analysis</div>
   <div class="wrap credit">Created by
     <a class="author" href="https://www.linkedin.com/in/ronmangune/" target="_blank" rel="noopener noreferrer" title="Ron Mangune on LinkedIn">
       Ron Mangune
@@ -718,13 +932,44 @@
     const b=document.getElementById('themeToggle');
     if(b) b.onclick=()=> window.__setTheme(
       document.documentElement.getAttribute('data-theme')==='dark' ? 'light' : 'dark');
+
+    // ---- Changelog modal (populated from the embedded CHANGELOG comment) ----
+    function extractChangelog(){
+      // Walk top-level nodes for the HTML comment that contains "CHANGELOG"
+      for(const n of document.childNodes){
+        if(n.nodeType===8 && /CHANGELOG/.test(n.nodeValue)) return n.nodeValue;
+      }
+      // also check inside <html> in case the comment sits there
+      for(const n of document.documentElement.childNodes){
+        if(n.nodeType===8 && /CHANGELOG/.test(n.nodeValue)) return n.nodeValue;
+      }
+      return '';
+    }
+    function buildChangelogHTML(){
+      const raw=extractChangelog();
+      const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+      const lines=raw.split('\n');
+      let out='', open=false;
+      for(let ln of lines){
+        const m=ln.match(/^\s*(v\d+\.\d+\.\d+)\s*[—-]\s*(.+)$/);
+        if(m){ out+=`<div class="cl-entry"><span class="cl-ver">${esc(m[1])}</span><span class="cl-txt">${esc(m[2].trim())}</span></div>`; }
+      }
+      return out || '<div class="cl-entry"><span class="cl-txt">No changelog found.</span></div>';
+    }
+    const ov=document.getElementById('clOverlay');
+    const openCl=()=>{ document.getElementById('clBody').innerHTML=buildChangelogHTML(); ov.classList.add('open'); };
+    const closeCl=()=> ov.classList.remove('open');
+    const vp=document.getElementById('verPill'); if(vp) vp.onclick=openCl;
+    const cc=document.getElementById('clClose'); if(cc) cc.onclick=closeCl;
+    if(ov) ov.addEventListener('click', e=>{ if(e.target===ov) closeCl(); });
+    document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeCl(); });
   });
 })();
 </script>
 <script>
 "use strict";
 /* ==================================================================
-   PCAP SIP Analyzer — engine + UI
+   PCAP SIP QOS Analyzer — engine + UI
    Exposed as window.PSA for headless testing.
    ================================================================== */
 const PSA = (function(){
@@ -914,6 +1159,27 @@ const PSA = (function(){
     return {ipver, src, dst, transport, sport, dport, payload:u8.subarray(payloadOff)};
   }
 
+  // Best-effort RTP header decode (RFC 3550). Returns null if it doesn't look like RTP.
+  function parseRtp(p){
+    if(!p || p.length<12) return null;
+    const b0=p[0];
+    if((b0>>6)!==2) return null;              // version must be 2
+    const cc=b0&0x0f;                          // CSRC count
+    const b1=p[1];
+    const pt=b1&0x7f;                          // payload type
+    const marker=(b1>>7)&1;
+    // filter out RTCP (pt 72-76 map to RTCP PT 200-204 in the marker+pt byte)
+    if(pt>=72 && pt<=76) return null;
+    // plausible audio/video PT: 0-34 static, or 96-127 dynamic
+    if(!((pt<=34) || (pt>=96 && pt<=127))) return null;
+    const headerLen=12+cc*4;
+    if(p.length < headerLen) return null;
+    const seq=(p[2]<<8)|p[3];
+    const ts=((p[4]<<24)|(p[5]<<16)|(p[6]<<8)|p[7])>>>0;
+    const ssrc=((p[8]<<24)|(p[9]<<16)|(p[10]<<8)|p[11])>>>0;
+    return {pt, marker, seq, ts, ssrc};
+  }
+
   /* ================================================================
      3. SIP EXTRACTION + PARSE
      ================================================================ */
@@ -1100,6 +1366,19 @@ const PSA = (function(){
     if(cseq){ const cm=cseq.match(/(\d+)\s+(\w+)/); if(cm){msg.cseqNum=parseInt(cm[1],10);msg.cseqMethod=cm[2].toUpperCase();} }
     msg.from=parseNameAddr(first('from')||'');
     msg.to=parseNameAddr(first('to')||'');
+    // caller-ID sources
+    msg.pai = parseNameAddr(first('p-asserted-identity')||first('p-preferred-identity')||'');
+    const rpidRaw = first('remote-party-id')||first('p-remote-party-id');
+    msg.rpid = parseNameAddr(rpidRaw||'');
+    if(rpidRaw){
+      const pm=rpidRaw.match(/privacy=([\w-]+)/i); msg.rpidPrivacy = pm?pm[1].toLowerCase():null;
+      const sm=rpidRaw.match(/screen=([\w-]+)/i); msg.rpidScreen = sm?sm[1].toLowerCase():null;
+    }
+    const privHdr = first('privacy');
+    msg.privacy = privHdr? privHdr.toLowerCase() : null;
+    // ISUP OLI (originating line info) from From/PAI URI params
+    const oliM=(first('from')||'').match(/isup-oli=(\d+)/i) || (first('p-asserted-identity')||'').match(/oli=(\d+)/i);
+    msg.oli = oliM? oliM[1] : null;
     msg.via=(headers['via']||[]).map(parseVia);
     msg.contacts=(headers['contact']||[]).map(parseContact);
     msg.expiresHdr = first('expires')!==null? parseInt(first('expires'),10): null;
@@ -1144,18 +1423,25 @@ const PSA = (function(){
     const t0 = cap.packets.length? cap.packets[0].tsSec + cap.packets[0].tsUsec/1e6 : 0;
 
     const messages=[];  // every SIP message with pkt context
+    const rtpPkts=[];    // raw RTP observations for QoS
     let sipPktCount=0;
     cap.packets.forEach((pk,i)=>{
       const fr=decodeFrame(pk.data, pk.linktype);
       if(!fr) return;
+      const time = pk.tsSec + pk.tsUsec/1e6;
       const text=txtDecode(fr.payload);
-      if(!looksLikeSip(text)) return;
+      if(!looksLikeSip(text)){
+        // Not SIP — see if it's an RTP media packet (UDP, even-ish, RTP version 2)
+        const rtp = fr.transport==='UDP' ? parseRtp(fr.payload) : null;
+        if(rtp){ rtpPkts.push({time, src:fr.src, dst:fr.dst, sport:fr.sport, dport:fr.dport,
+          pt:rtp.pt, seq:rtp.seq, ts:rtp.ts, ssrc:rtp.ssrc, marker:rtp.marker}); }
+        return;
+      }
       sipPktCount++;
       const parts=splitSip(text);
       parts.forEach(pt=>{
         if(!looksLikeSip(pt)) return;
         const sip=parseSip(pt);
-        const time = pk.tsSec + pk.tsUsec/1e6;
         messages.push({
           pkt:i+1, time, rel:time-t0,
           src:fr.src, dst:fr.dst, sport:fr.sport, dport:fr.dport,
@@ -1498,6 +1784,120 @@ const PSA = (function(){
     const digits=(x)=>String(x||'').replace(/\D/g,'');
     // trunk/session ids like "287102-8sgp7989oikq7" → show the extension part
     const prettyId=(x)=>{ const m=String(x||'').match(/^(\d{3,15})-[a-z0-9]{6,}$/i); return m? m[1] : x; };
+
+    // ---- QoS: estimated MOS ceiling from the negotiated codec ----
+    // NOTE: this is an ESTIMATE from the codec's theoretical best-case only.
+    // These captures carry SIP signaling with NO RTP, so real packet loss / jitter /
+    // latency cannot be measured. The value below assumes a clean network and is the
+    // codec's upper bound, not the quality actually experienced on the call.
+    const CODEC_MOS={
+      'PCMU':{mos:4.4,name:'G.711 µ-law (PCMU)'}, 'PCMA':{mos:4.4,name:'G.711 A-law (PCMA)'},
+      'G722':{mos:4.5,name:'G.722 (HD wideband)'}, 'G722.2':{mos:4.5,name:'AMR-WB / G.722.2'},
+      'AMR-WB':{mos:4.5,name:'AMR-WB'}, 'opus':{mos:4.5,name:'Opus'}, 'OPUS':{mos:4.5,name:'Opus'},
+      'G729':{mos:3.9,name:'G.729'}, 'G729A':{mos:3.9,name:'G.729A'}, 'G723':{mos:3.8,name:'G.723.1'},
+      'GSM':{mos:3.5,name:'GSM 06.10'}, 'iLBC':{mos:3.9,name:'iLBC'}, 'speex':{mos:3.8,name:'Speex'},
+      'telephone-event':{mos:null,name:'DTMF (telephone-event)'}
+    };
+    function estimateMOS(codec){
+      if(!codec) return null;
+      const key=Object.keys(CODEC_MOS).find(k=>k.toLowerCase()===String(codec).toLowerCase());
+      const info = key? CODEC_MOS[key] : null;
+      if(!info || info.mos==null) return {codec, codecName: info?info.name:codec, ceiling:null, estimated:true,
+        note:'No MOS reference for this codec.'};
+      return { codec, codecName: info.name, ceiling: info.mos, estimated:true,
+        // Min == Avg == ceiling because there is no per-packet variation to measure (no RTP)
+        min: info.mos, avg: info.mos,
+        note: 'Best-case MOS for the negotiated codec on a clean network. Not measured — this capture has SIP signaling only (no RTP), so real loss/jitter/latency are unknown.' };
+    }
+
+    const CARRIER_NETS=[
+      ['216.82.224.','Bandwidth','SBC'],['216.82.225.','Bandwidth','SBC'],['216.82.226.','Bandwidth','SBC'],['216.82.227.','Bandwidth','SBC'],
+      ['67.231.','Bandwidth','SBC'],
+      ['206.146.','Inteliquent / IQNT','SBC'],['64.2.142.','Inteliquent / IQNT','SBC'],
+      ['192.76.120.','Telnyx','SBC'],['192.76.121.','Telnyx','SBC'],['185.246.41.','Telnyx','SBC'],
+      ['64.136.','VoIP Innovations','SBC'],
+      ['4.55.','Level 3 / CenturyLink','SBC']
+    ];
+    function carrierOf(ip){
+      if(!ip) return null;
+      for(const [pfx,name,role] of CARRIER_NETS){ if(String(ip).startsWith(pfx)) return {name,role}; }
+      return null;
+    }
+    function buildInitiator(inv){
+      const sip=inv.sip;
+      const ip=inv.src, port=inv.sport;
+      const contactHost=(sip.contacts[0]&&sip.contacts[0].host)||null;
+      const contactUser=(sip.contacts[0]&&sip.contacts[0].user)||null;
+      const uad=dissectUA(sip.userAgent||null);
+      const priv=RFC1918(ip);
+      const carrier=carrierOf(ip);
+      const via0=(sip.via&&sip.via[0])||null;
+      let sbcHint=null;
+      const branch=(via0&&via0.branch)||'';
+      if(/sansay/i.test(branch)) sbcHint='Sansay SBC';
+      else if(/broadworks/i.test(sip.userAgent||'')) sbcHint='BroadWorks';
+      let kind, label, detail;
+      if(carrier){ kind='carrier'; label=carrier.name+' '+carrier.role;
+        detail='Public carrier trunk — this call arrived from '+carrier.name+"'s "+carrier.role+' at '+ip+'. The human caller is on the PSTN upstream of this SBC.'; }
+      else if(uad && uad.kind==='server'){ kind='pbx'; label=(uad.vendor||'PBX')+' gateway';
+        detail='An internal '+(uad.vendor||'PBX')+' relayed this call in — the caller is upstream of it, not this box.'; }
+      else if(uad && (uad.kind==='hardphone'||uad.kind==='softphone')){ kind='endpoint';
+        label=(uad.vendor?uad.vendor+' ':'')+(uad.kind==='softphone'?'softphone':'hardphone');
+        detail='A user endpoint originated the call directly.'; }
+      else if(!priv && contactUser && /^\+?\d{3,15}$/.test(contactUser)){ kind='trunk'; label='Carrier SIP trunk / SBC';
+        detail='A public SBC/trunk delivered the call (number-form contact, no device UA) at '+ip+'. Likely PSTN-inbound.'; }
+      else if(priv){ kind='internal'; label='Internal node'; detail='A private-network element forwarded the call from '+ip+'.'; }
+      else { kind='external'; label='External SIP peer'; detail='A public SIP peer at '+ip+' sent the call; device type not advertised.'; }
+      if(sbcHint) label += ' · '+sbcHint;
+      return {ip, port, priv, kind, label, detail, carrier: carrier?carrier.name:null,
+        contactHost, sbcHint, ua: sip.userAgent||null, transport:(via0&&via0.transport)||inv.transport};
+    }
+
+    function buildCallerID(sip){
+      const clean=(s)=> (s||'').replace(/\s+/g,' ').trim();
+      const fromName = clean(sip.from.display);
+      const paiName  = clean(sip.pai && sip.pai.display);
+      const rpidName = clean(sip.rpid && sip.rpid.display);
+      // pick the best display name + record its source
+      let name=null, source=null;
+      if(fromName){ name=fromName; source='From'; }
+      else if(paiName){ name=paiName; source='P-Asserted-Identity'; }
+      else if(rpidName){ name=rpidName; source='Remote-Party-ID'; }
+      // agreement check across the sources that carry a name
+      const names=[['From',fromName],['P-Asserted-Identity',paiName],['Remote-Party-ID',rpidName]].filter(x=>x[1]);
+      const distinct=[...new Set(names.map(n=>n[1].toUpperCase()))];
+      const conflict = distinct.length>1;
+      // privacy / anonymity
+      const priv = sip.privacy||'';
+      const anon = /id|header|user|full/.test(priv) || sip.rpidPrivacy==='full'
+        || (name && /^(anonymous|unavailable|unknown|private|restricted|withheld)$/i.test(name));
+      // CNAM type heuristic
+      const num = sip.from.user||'';
+      const isInternalExt = /^\d{2,6}$/.test(String(num)) && !name || (name && /^\d{2,6}$/.test(name));
+      let cnamType='subscriber', typeNote='A resolved subscriber/business name (a real CNAM lookup succeeded).';
+      const US_STATES=/(AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY|DC)/;
+      if(anon){ cnamType='anonymous'; typeNote='Caller requested privacy — the name/number is withheld.'; }
+      else if(!name){ cnamType='none'; typeNote='No caller name was provided (number only). Downstream CNAM dip may be needed.'; }
+      else if(/^\d+$/.test(name)){ cnamType='extension'; typeNote='An internal extension, not a PSTN CNAM.'; }
+      else if(/^(WIRELESS CALLER|CELLULAR CALLER|WIRELESS CALL|CELL PHONE|TOLL FREE|TOLL-FREE|PAYPHONE|OUT OF AREA|OUT-OF-AREA|UNAVAILABLE|ANONYMOUS|V\d{2,})$/i.test(name)){
+        cnamType='generic'; typeNote='A generic carrier fallback (no subscriber name on file) — a real CNAM dip did not return a person/business.';
+      }
+      else if(/^[A-Z][A-Z .'-]*\s{1,}[A-Z]{2}$/.test(name) && US_STATES.test(name.slice(-2)) && !/[a-z]/.test(name)){
+        // e.g. "BAKERSFIELD  CA" — a locality ending in a real 2-letter state code
+        cnamType='geographic'; typeNote='A city/state locality name, not a subscriber name — typical carrier fallback when no CNAM record exists.';
+      }
+      // OLI (originating line info) labels (common NANP values)
+      const OLI={'00':'Plain (POTS)','01':'Multiparty','02':'ANI failure','06':'Station level rating',
+        '07':'Special operator handling','20':'Automatic Identified Outward Dialing','23':'Coin/Non-coin',
+        '24':'Toll-free','27':'Coin','29':'Prison/inmate','52':'Outward Wide Area Telecomm',
+        '60':'TRS','61':'Cellular/Wireless (type 1)','62':'Cellular/Wireless (type 2)','63':'Cellular/Wireless roaming','70':'Private paystation'};
+      const oli = sip.oli ? {code:sip.oli, label: OLI[sip.oli]||('OLI '+sip.oli)} : null;
+      return {name: name||null, number: prettyId(num), source, conflict,
+        sources:{from:fromName||null, pai:paiName||null, rpid:rpidName||null},
+        anon, privacy: priv||null, screen: sip.rpidScreen||null,
+        cnamType, typeNote, oli};
+    }
+
     const firstInvSender=new Map();
     canonical.forEach(m=>{ if(!m.sip.isResponse && m.sip.method==='INVITE' && m.sip.callId && !firstInvSender.has(m.sip.callId)) firstInvSender.set(m.sip.callId,m.src); });
 
@@ -1558,6 +1958,8 @@ const PSA = (function(){
       return {
         callId:L.callId,
         caller:{num:prettyId(inv.sip.from.user), display:inv.sip.from.display, ip:inv.src},
+        cid: buildCallerID(inv.sip),
+        initiator: buildInitiator(inv),
         callee:{num:prettyId(inv.sip.to.user||((inv.sip.ruri||'').match(/sips?:([^@;>\s]+)/)||[])[1]||'?'),
                 raw:inv.sip.to.user||null, display:inv.sip.to.display||null},
         ua: inv.sip.userAgent || null,
@@ -1579,6 +1981,7 @@ const PSA = (function(){
         outcome, ocls, reinvites, hold, redirected, redirectTo:redirectTo?prettyId(redirectTo.split('@')[0])+(redirectTo.includes('@')?'@'+redirectTo.split('@')[1]:''):null, divertReason, translated,
         codecsOffered: sdpOffer? sdpOffer.codecs:[], codecsAnswered: sdpAnswer? sdpAnswer.codecs:[],
         codec: sdpAnswer && sdpAnswer.codecs.length? sdpAnswer.codecs[0] : (sdpOffer&&sdpOffer.codecs[0])||null,
+        qos: estimateMOS(sdpAnswer && sdpAnswer.codecs.length? sdpAnswer.codecs[0] : (sdpOffer&&sdpOffer.codecs[0])||null),
         mediaOffer: sdpOffer? {ip:sdpOffer.mediaIp,port:sdpOffer.audioPort}:null,
         mediaAnswer: sdpAnswer? {ip:sdpAnswer.mediaIp,port:sdpAnswer.audioPort}:null,
         isOriginLeg: isClient(inv),
@@ -1768,6 +2171,31 @@ const PSA = (function(){
     const durationMs = cap.packets.length ?
       (cap.packets[cap.packets.length-1].tsSec+cap.packets[cap.packets.length-1].tsUsec/1e6 - t0)*1000 : 0;
 
+    // ---- RTP QoS: group RTP by SSRC, compute loss + jitter + MOS (E-model) ----
+    const rtpStreams = analyzeRtp(rtpPkts);
+    // Attach measured MOS to each call by matching its SDP media IP:port to a stream
+    calls.forEach(c=>{
+      const p=c.primary;
+      const media=[]; // collect media endpoints (ip:port) advertised across legs
+      c.legs.forEach(l=>{
+        if(l.mediaOffer&&l.mediaOffer.ip&&l.mediaOffer.port) media.push(l.mediaOffer.ip+':'+l.mediaOffer.port);
+        if(l.mediaAnswer&&l.mediaAnswer.ip&&l.mediaAnswer.port) media.push(l.mediaAnswer.ip+':'+l.mediaAnswer.port);
+      });
+      const matched = rtpStreams.filter(st=>
+        media.includes(st.dst+':'+st.dport) || media.includes(st.src+':'+st.sport));
+      if(matched.length){
+        const mins=matched.map(s=>s.mosMin), avgs=matched.map(s=>s.mosAvg);
+        p.qosMeasured = {
+          streams: matched.length,
+          min: Math.min(...mins), avg: avgs.reduce((a,b)=>a+b,0)/avgs.length,
+          lossPct: Math.max(...matched.map(s=>s.lossPct)),
+          jitterMs: Math.max(...matched.map(s=>s.jitterMs)),
+          packets: matched.reduce((a,s)=>a+s.packets,0),
+          codecPt: matched[0].pt, measured:true
+        };
+      }
+    });
+
     return {
       filename, cap:{format:cap.format, linktype:cap.linktype, packetCount:cap.packets.length},
       t0, durationMs,
@@ -1775,11 +2203,83 @@ const PSA = (function(){
       sipTotal: canonical.length,
       mirrorDupes: messages.length - canonical.length,
       transactions, registrations, regGroups, verdicts, callLegs, calls, endpoints, warnings: warningsAgg,
+      rtpStreams, hasRtp: rtpStreams.length>0,
       ipLabels: (function(){ const map={}; endpoints.forEach(e=>{ map[e.ip]={role:e.role, private:e.private, domain:(e.domains[0]||null), hostType:e.hostType}; }); return map; })(),
       responseCodes: countCodes(canonical),
       transportMix: countTransport(canonical)
     };
   }
+
+  // Clock rate per RTP payload type (for jitter → ms). Most audio = 8000 Hz.
+  function rtpClock(pt){ if(pt===9) return 8000; /*G722 uses 8k for RTP ts*/ return 8000; }
+  // E-model: R-factor → MOS. Inputs: avg one-way delay(ms), jitter(ms), loss fraction(0..1), codec Ie.
+  function emodelMOS(delayMs, jitterMs, loss, ieBase){
+    // effective latency includes jitter-buffer allowance (2× jitter)
+    const eff = delayMs + 2*jitterMs + 10;
+    let Id = 0.024*eff + (eff>177.3? 0.11*(eff-177.3):0);   // delay impairment
+    const Ie = ieBase + (95 - ieBase) * (loss/(loss + (ieBase>0? 0.10:0.10)+0.01)); // packet-loss impairment (Bpl≈simplified)
+    let R = 93.2 - Id - Ie;
+    if(R<0) R=0; if(R>100) R=100;
+    let mos = R<0?1 : R>100?4.5 : 1 + 0.035*R + R*(R-60)*(100-R)*7e-6;
+    if(mos<1) mos=1; if(mos>4.5) mos=4.5;
+    return {mos, R};
+  }
+  const CODEC_IE={0:0,8:0,9:0,18:11,4:15,3:20,111:0,96:0}; // PCMU/PCMA/G722≈0, G729≈11, G723≈15, GSM≈20
+  function analyzeRtp(pkts){
+    if(!pkts.length) return [];
+    // group by SSRC + 5-tuple direction
+    const groups=new Map();
+    pkts.forEach(p=>{ const k=p.ssrc+'|'+p.src+':'+p.sport+'>'+p.dst+':'+p.dport;
+      if(!groups.has(k)) groups.set(k,[]); groups.get(k).push(p); });
+    const streams=[];
+    groups.forEach((arr,k)=>{
+      if(arr.length<10) return; // too few to judge
+      arr.sort((a,b)=>a.time-b.time);
+      const clock=rtpClock(arr[0].pt);
+      // packet loss from sequence gaps
+      let expected=0, received=arr.length;
+      const seqs=arr.map(a=>a.seq);
+      let minSeq=Math.min(...seqs), maxSeq=Math.max(...seqs);
+      // handle 16-bit wrap crudely: if range huge, approximate by received span
+      expected = (maxSeq-minSeq+1);
+      if(expected<received) expected=received;
+      const lost=Math.max(0, expected-received);
+      const lossPct = expected? (lost/expected)*100 : 0;
+      // interarrival jitter (RFC3550) in ms + windowed MOS (per ~1s)
+      let J=0, prevT=null, prevTs=null;
+      let winStart=arr[0].time, winJ=0, winLoss=0, winCount=0, mosSamples=[];
+      let winExpFirst=arr[0].seq, winRecv=0;
+      function flushWindow(endT){
+        if(winCount<3) return;
+        const wl = winExpFirst!=null? Math.max(0,( (arr.find(x=>x.time<=endT&&x.seq>=winExpFirst)?0:0) )):0;
+        const lossFrac = Math.min(0.5, lossPct/100); // use overall loss as floor
+        const {mos}=emodelMOS(30, winJ, lossFrac, CODEC_IE[arr[0].pt]!=null?CODEC_IE[arr[0].pt]:5);
+        mosSamples.push(mos);
+      }
+      arr.forEach(p=>{
+        if(prevT!=null){
+          const dt=(p.time-prevT)*1000;                 // ms
+          const dts=((p.ts-prevTs)>>>0)/clock*1000;      // expected ms from RTP ts
+          const d=Math.abs(dt-dts);
+          J += (d - J)/16;                               // RFC3550 smoothing
+        }
+        prevT=p.time; prevTs=p.ts;
+        winJ=J; winCount++;
+        if(p.time-winStart>=1.0){ flushWindow(p.time); winStart=p.time; winCount=0; }
+      });
+      flushWindow(arr[arr.length-1].time);
+      const jitterMs=J;
+      const lossFrac=Math.min(0.5, lossPct/100);
+      const overall=emodelMOS(30, jitterMs, lossFrac, CODEC_IE[arr[0].pt]!=null?CODEC_IE[arr[0].pt]:5);
+      const mosAvg = mosSamples.length? mosSamples.reduce((a,b)=>a+b,0)/mosSamples.length : overall.mos;
+      const mosMin = mosSamples.length? Math.min(...mosSamples) : overall.mos;
+      streams.push({ ssrc:arr[0].ssrc, src:arr[0].src, sport:arr[0].sport, dst:arr[0].dst, dport:arr[0].dport,
+        pt:arr[0].pt, packets:received, expected, lost, lossPct, jitterMs,
+        mosAvg:Math.max(1,Math.min(4.5,mosAvg)), mosMin:Math.max(1,Math.min(4.5,mosMin)), R:overall.R });
+    });
+    return streams;
+  }
+
 
   const SIP_REASON={100:'Trying',180:'Ringing',181:'Call Is Being Forwarded',182:'Queued',183:'Session Progress',
     200:'OK',202:'Accepted',301:'Moved Permanently',302:'Moved Temporarily',305:'Use Proxy',380:'Alternative Service',
@@ -1821,7 +2321,103 @@ const PSA = (function(){
     const m={}; msgs.forEach(x=>m[x.transport]=(m[x.transport]||0)+1); return m;
   }
 
-  return {analyze, parseCapture, decodeFrame, parseSip, RFC1918, short};
+  // ================================================================
+  //  MEDIA SUMMARY IMPORT (Operations Monitor RTP probe output)
+  // ================================================================
+  function parseMediaSummary(text){
+    const lines=String(text||'').replace(/\u00a0/g,' ').split('\n').map(l=>l.replace(/\s+$/,''));
+    const streams=[]; let cur=null; let pendingArrow=[];
+    const headerRE=/(.+?)@?([\d.]+):(\d+)\s*(?:VLAN\s*(\d+))?\s*(?:→|->)\s*(.+?)@?([\d.]+):(\d+)\s*(?:VLAN\s*(\d+))?/;
+    const kv=(l)=>{ const m=l.match(/^([A-Za-z][A-Za-z ()\-]+?)\s{2,}(.+?)\s*$/)||l.match(/^([A-Za-z][A-Za-z ()\-]+?)\t(.+?)\s*$/); return m?[m[1].trim(),m[2].trim()]:null; };
+    const num=(v)=> v==null?null: (isNaN(parseFloat(String(v).replace(/[^0-9.\-]/g,'')))?null:parseFloat(String(v).replace(/[^0-9.\-]/g,'')));
+    function push(){ if(cur && (cur.src||cur.ssrc)) streams.push(cur); cur=null; }
+    for(let i=0;i<lines.length;i++){
+      const l=lines[i].trim(); if(!l) continue;
+      const hm=l.match(headerRE);
+      if(hm){ push(); cur={srcName:hm[1].trim()||null,src:hm[2],sport:hm[3],vlan:hm[4]||hm[8]||null,
+        dstName:hm[5].trim()||null,dst:hm[6],dport:hm[7]}; pendingArrow=[]; continue; }
+      if(l==='→'||l==='->') continue;
+      const ipp=l.match(/^([\d.]+):(\d+)$/);
+      if(ipp){ pendingArrow.push({ip:ipp[1],port:ipp[2]});
+        if(pendingArrow.length===2){ push(); cur={src:pendingArrow[0].ip,sport:pendingArrow[0].port,
+          dst:pendingArrow[1].ip,dport:pendingArrow[1].port}; pendingArrow=[]; }
+        continue; }
+      const p=kv(lines[i]);
+      if(p && cur){
+        const [k,v]=p; const K=k.toLowerCase();
+        if(K==='ssrc') cur.ssrc=v;
+        else if(K==='reporter') cur.reporter=v;
+        else if(K==='codecs') cur.codec=v;
+        else if(K.startsWith('r factor')) cur.rfactor=num(v);
+        else if(K==='mos average') cur.mosAvg=num(v);
+        else if(K==='mos minimum') cur.mosMin=num(v);
+        else if(K==='packets received') cur.pktRecv=num(v);
+        else if(K==='packets lost') cur.pktLost=num(v);
+        else if(K==='packets discarded') cur.pktDisc=num(v);
+        else if(K.startsWith('packet loss')) cur.lossPct=num(v);
+        else if(K==='jitter average') cur.jitterAvg=num(v);
+        else if(K==='jitter maximum') cur.jitterMax=num(v);
+        else if(K.startsWith('sip call')) cur.callId=v;
+        else if(K==='stream direction') cur.direction=v;
+        else if(K==='media type') cur.mediaType=v;
+        else if(K==='first packet') cur.firstPkt=v;
+        else if(K==='last packet') cur.lastPkt=v;
+      }
+    }
+    push();
+    return analyzeMediaSummary(streams);
+  }
+
+  // Reduce raw probe streams into a per-call QoS picture with leg-blame.
+  function analyzeMediaSummary(streams){
+    // Keep streams that actually carry MOS/loss numbers (prefer RTP probes over bare RTCP)
+    const scored = streams.filter(s=> s.mosAvg!=null || s.lossPct!=null || s.pktLost!=null);
+    // De-duplicate: same direction reported by multiple probes → prefer the one with MOS+loss detail
+    const byDir=new Map();
+    scored.forEach(s=>{
+      const key=`${s.src}:${s.sport}>${s.dst}:${s.dport}`;
+      const rank=(x)=> (x.mosMin!=null?2:0)+(x.lossPct!=null?1:0)+(/rtp-probe|ocom/i.test(x.reporter||'')?1:0);
+      if(!byDir.has(key) || rank(s)>rank(byDir.get(key))) byDir.set(key,s);
+    });
+    const legs=[...byDir.values()].map(s=>{
+      const loss = s.lossPct!=null? s.lossPct : (s.pktRecv&&s.pktLost!=null? (s.pktLost/(s.pktRecv+s.pktLost))*100 : null);
+      const mosAvg = s.mosAvg!=null? s.mosAvg : null;
+      const mosMin = s.mosMin!=null? s.mosMin : mosAvg;
+      let grade='ok';
+      if(mosMin!=null){ if(mosMin<3.1||((loss||0)>5)) grade='fail'; else if(mosMin<3.6||((loss||0)>1)) grade='warn'; }
+      else if(loss!=null){ if(loss>5) grade='fail'; else if(loss>1) grade='warn'; }
+      return { src:s.src, sport:s.sport, dst:s.dst, dport:s.dport, srcName:s.srcName||null, dstName:s.dstName||null,
+        vlan:s.vlan||null, direction:s.direction||null, reporter:s.reporter||null, codec:s.codec||null, ssrc:s.ssrc||null,
+        rfactor:s.rfactor??null, mosAvg, mosMin, loss, jitterAvg:s.jitterAvg??null, jitterMax:s.jitterMax??null,
+        pktRecv:s.pktRecv??null, pktLost:s.pktLost??null, pktDisc:s.pktDisc??null, callId:s.callId||null, grade };
+    });
+    if(!legs.length) return {legs:[], ok:false};
+    const mosVals=legs.filter(l=>l.mosAvg!=null).map(l=>l.mosAvg);
+    const minVals=legs.filter(l=>l.mosMin!=null).map(l=>l.mosMin);
+    const overallAvg = mosVals.length? mosVals.reduce((a,b)=>a+b,0)/mosVals.length : null;
+    const overallMin = minVals.length? Math.min(...minVals) : null;
+    // worst leg = lowest mosMin (fallback mosAvg / highest loss)
+    const worst = legs.slice().sort((a,b)=>{
+      const am=a.mosMin??a.mosAvg??9, bm=b.mosMin??b.mosAvg??9;
+      if(am!==bm) return am-bm; return (b.loss||0)-(a.loss||0);
+    })[0];
+    // blame text
+    let blame=null;
+    if(worst && (worst.grade!=='ok')){
+      const dirTxt = worst.direction || `${worst.srcName||worst.src} → ${worst.dstName||worst.dst}`;
+      const reasons=[];
+      if(worst.loss!=null && worst.loss>1) reasons.push(`${worst.loss.toFixed(1)}% packet loss`);
+      if(worst.jitterAvg!=null && worst.jitterAvg>30) reasons.push(`high jitter (${worst.jitterAvg.toFixed(1)} ms avg)`);
+      if(worst.jitterMax!=null && worst.jitterMax>50 && (!worst.jitterAvg||worst.jitterAvg<=30)) reasons.push(`jitter spikes to ${worst.jitterMax.toFixed(0)} ms`);
+      if(!reasons.length && worst.mosMin!=null && worst.mosMin<3.6) reasons.push('degraded MOS');
+      blame = { direction:dirTxt, src:worst.srcName||worst.src, dst:worst.dstName||worst.dst,
+        reasons, loss:worst.loss, jitterAvg:worst.jitterAvg, mosMin:worst.mosMin, grade:worst.grade,
+        oneWay: legs.length>=2 && legs.some(l=>l!==worst && (l.grade==='ok')) };
+    }
+    return { legs, overallAvg, overallMin, worst, blame, ok:true };
+  }
+
+  return {analyze, parseCapture, decodeFrame, parseSip, RFC1918, short, parseMediaSummary};
 })();
 
 /* ==================================================================
@@ -1831,6 +2427,7 @@ const PSA = (function(){
   const $=s=>document.querySelector(s);
   const el=(t,c,h)=>{const e=document.createElement(t); if(c)e.className=c; if(h!==undefined)e.innerHTML=h; return e;};
   let MODEL=null;
+  let MEDIA_QOS=null;   // set when a Media Summary is pasted; source of truth for dashboard QoS
 
   /* --- scope animation on empty state --- */
   (function scope(){
@@ -1870,23 +2467,59 @@ const PSA = (function(){
 
   /* --- file handling --- */
   const dz=$('#dropzone'), fi=$('#fileInput');
+  let PENDING_FILE=null;                        // capture staged on the upload screen
+  function stageFile(f){
+    PENDING_FILE=f;
+    const pk=$('#dzPicked');
+    if(pk){ pk.style.display='block'; pk.innerHTML=`✓ <b>${escapeHtml(f.name)}</b> <span class="faint">(${(f.size/1024).toFixed(0)} KB)</span> — ready. Click <b>Analyze</b>.`; }
+    $('#errBox').style.display='none';
+  }
   $('#pickBtn').onclick=()=>fi.click();
-  fi.onchange=e=>{ if(e.target.files[0]) handleFile(e.target.files[0]); };
+  fi.onchange=e=>{ if(e.target.files[0]) stageFile(e.target.files[0]); };
   ['dragover','dragenter'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('drag');}));
   ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.remove('drag');}));
-  dz.addEventListener('drop',e=>{ const f=e.dataTransfer.files[0]; if(f) handleFile(f); });
-  $('#newFile').onclick=()=>{ $('#dash').style.display='none'; $('#empty').style.display='block'; MODEL=null; fi.value=''; if(window.__startScope) window.__startScope(); };
+  dz.addEventListener('drop',e=>{ const f=e.dataTransfer.files[0]; if(f) stageFile(f); });
+  // Analyze — process the staged capture and any pasted Media Summary together.
+  $('#analyzeBtn').onclick=()=>{
+    if(!PENDING_FILE){ showErr('Choose or drop a capture file first'); return; }
+    const summaryText=($('#dzMsInput')&&$('#dzMsInput').value.trim())||'';
+    handleFile(PENDING_FILE, summaryText);
+  };
+  $('#clearBtn').onclick=()=>{
+    PENDING_FILE=null; fi.value='';
+    const dzp=$('#dzPicked'); if(dzp){ dzp.style.display='none'; dzp.innerHTML=''; }
+    const dzm=$('#dzMsInput'); if(dzm) dzm.value='';
+    $('#errBox').style.display='none';
+    if(window.__startScope) window.__startScope();
+  };
+  $('#newFile').onclick=()=>{
+    $('#dash').style.display='none'; $('#empty').style.display='block';
+    MODEL=null; MEDIA_QOS=null; fi.value=''; PENDING_FILE=null;
+    const dzp=$('#dzPicked'); if(dzp){ dzp.style.display='none'; dzp.innerHTML=''; }
+    const dzm=$('#dzMsInput'); if(dzm) dzm.value='';
+    const msi=$('#msInput'); if(msi) msi.value='';
+    const msr=$('#msResult'); if(msr) msr.innerHTML='';
+    if(window.__startScope) window.__startScope();
+  };
 
   function showErr(msg){ const b=$('#errBox'); b.style.display='block';
     b.textContent=msg + ' — try re-exporting from Wireshark as “Wireshark/tcpdump pcap” or pcapng.'; }
 
-  function handleFile(file){
+  function handleFile(file, summaryText){
     $('#errBox').style.display='none';
     const rd=new FileReader();
     rd.onload=()=>{
       try{
         const model=PSA.analyze(rd.result, file.name);
         MODEL=model;
+        // Media Summary: use the one passed in (from the upload screen) if present, else clear.
+        MEDIA_QOS=null;
+        const msi=$('#msInput');
+        if(summaryText){
+          try{ const r=PSA.parseMediaSummary(summaryText); if(r&&r.ok) MEDIA_QOS=r; }catch(e){}
+          if(msi) msi.value=summaryText;         // mirror into the Media QoS tab paste box
+        } else if(msi){ msi.value=''; }
+        const msr=$('#msResult'); if(msr) msr.innerHTML = MEDIA_QOS? renderMediaSummary(MEDIA_QOS) : '';
         render(model, file);
       }catch(err){ console.error(err); showErr('Could not parse this capture: '+err.message); }
     };
@@ -1901,9 +2534,9 @@ const PSA = (function(){
     $('#fFile').textContent=m.filename;
     $('#fMeta').textContent=`${m.cap.format.toUpperCase()} · linktype ${m.cap.linktype} · ${m.cap.packetCount} frames · ${(m.durationMs).toFixed(0)} ms · ${(file.size/1024).toFixed(1)} KB`;
 
-    renderCards(m); renderVerdicts(m); renderCallVerdicts(m); renderStatusLegend(m); renderTabs(m); renderLadder(m); renderCalls(m);
+    renderCards(m); renderVerdicts(m); renderCallVerdicts(m); renderStatusLegend(m); renderTabs(m); renderLadder(m); renderCalls(m); wireMediaQoS();
     renderReg(m); renderMsgs(m); renderEndpoints(m); renderWarnings(m); renderRaw(m);
-    setTab('ladder');
+    setTab(MEDIA_QOS && MEDIA_QOS.ok ? 'qos' : 'ladder');
     window.scrollTo({top:0});
   }
 
@@ -2061,8 +2694,37 @@ const PSA = (function(){
     host.appendChild(callCard);
   }
 
+  // Shared Media QoS state — set when a Media Summary is pasted+analyzed.
+  // The dashboard QoS panels source from THIS first, so both views always match.
+  const _mosBand=(v)=> v==null?'na': v>=4.0?'ok': v>=3.6?'warn': v>=3.1?'warn':'fail';
+  const _mosWord=(v)=> v==null?'—': v>=4.3?'Excellent': v>=4.0?'Good': v>=3.6?'Fair': v>=3.1?'Poor':'Bad';
+  function buildQosPanel(p){
+    // Dashboard shows ONLY Average + Minimum MOS, reflecting the Media QoS tab,
+    // with a clickable control to open the Media QoS tab for full detail.
+    if(MEDIA_QOS && MEDIA_QOS.ok){
+      const M=MEDIA_QOS;
+      const worst = M.blame ? `<span class="vqos-badge ${M.blame.grade==='fail'?'fail':'warn'}">${M.blame.grade==='fail'?'⛔':'⚠️'} ${escapeHtml(M.blame.direction)} degraded</span>` : `<span class="vqos-badge ok">✓ all legs healthy</span>`;
+      return `
+        <div class="vqos-mini" role="button" tabindex="0" onclick="window.__gotoQos&&window.__gotoQos()" onkeydown="if(event.key==='Enter')window.__gotoQos&&window.__gotoQos()">
+          <div class="vqm-scores">
+            <div class="mos"><div class="mos-l">Average MOS</div><div class="mos-v ${_mosBand(M.overallAvg)}">${M.overallAvg!=null?M.overallAvg.toFixed(2):'—'}</div><div class="mos-w">${_mosWord(M.overallAvg)}</div></div>
+            <div class="mos"><div class="mos-l">Minimum MOS</div><div class="mos-v ${_mosBand(M.overallMin)}">${M.overallMin!=null?M.overallMin.toFixed(2):'—'}</div><div class="mos-w">${_mosWord(M.overallMin)}</div></div>
+          </div>
+          <div class="vqm-side">${worst}<span class="vqm-link">Open Media QoS →</span></div>
+        </div>`;
+    }
+    // No Media Summary pasted yet — compact prompt that opens the tab.
+    return `
+      <div class="vqos-mini empty alert" role="button" tabindex="0" onclick="window.__gotoQos&&window.__gotoQos()" onkeydown="if(event.key==='Enter')window.__gotoQos&&window.__gotoQos()">
+        <div class="vqm-empty">⚠️ <b>Voice quality (MOS) not loaded.</b> No Media Summary has been added yet, so MOS can't be shown. Click <b>Open Media QoS</b> to upload / paste the Media Summary file.</div>
+        <span class="vqm-link">Open Media QoS →</span>
+      </div>`;
+  }
+
   function renderCallVerdicts(m){
     const host=$('#verdicts');
+    if(!host) return;
+    host.innerHTML='';                 // clear first — this is a full re-render (also called on QoS update)
     if(!m.calls || !m.calls.length) return;
     m.calls.forEach(c=>{
       const p=c.primary;
@@ -2081,8 +2743,12 @@ const PSA = (function(){
       if(p.answered) tl.push(`answered +${(p.answerMs/1000).toFixed(2)}s`);
       else if(p.code) tl.push(`${p.code} ${p.reason}`);
       if(p.durationS!==null) tl.push(`hung up by ${p.hangupBy} after ${p.durationS.toFixed(1)}s`);
+      const init=p.initiator||{};
+      const initName = init.carrier || (init.label? init.label.split(' · ')[0] : null);
       const tech=`
         <details class="tech"><summary>▸ Technical detail</summary>
+          ${init.label?`<div class="vmeta"><b>Initiator device:</b> ${escapeHtml(init.label)} — ${escapeHtml(init.ip||'?')}${init.port?`:${init.port}`:''} (${init.priv?'private':'public'}${init.transport?', '+escapeHtml(init.transport):''})${init.carrier?` · carrier: ${escapeHtml(init.carrier)}`:''}${init.sbcHint?` · ${escapeHtml(init.sbcHint)}`:''}${init.contactHost?` · Contact ${escapeHtml(init.contactHost)}`:''}</div>
+          <div class="vnote">${escapeHtml(init.detail||'')}</div>`:''}
           <div class="vnote">${tl.map(escapeHtml).join(' → ')}</div>
           <div class="vmeta">${c.legs.length} leg${c.legs.length!==1?'s':''}${p.codec?` · codec ${p.codec}`:''}${p.reinvites?` · ${p.reinvites} re-INVITE(s)`:''}${p.hold?' · hold detected':''} · ${p.transport} · Call-ID ${PSA.short(p.callId)} · signaling only (no RTP in file)</div>
         </details>`;
@@ -2090,6 +2756,40 @@ const PSA = (function(){
       const cu=p.uad||{};
       const ckind={hardphone:'Hardphone',softphone:'Softphone',server:'Server/PBX',unknown:''}[cu.kind]||'';
       const cmacMatch=(p.macVendor && cu.vendor && p.macVendor.toLowerCase().split('/')[0]===cu.vendor.toLowerCase().split('/')[0]);
+      const cid=p.cid||{};
+      const CIDTYPE={subscriber:{t:'Subscriber / business name',c:'ok'},
+        geographic:{t:'City / state (carrier fallback)',c:'warn'},
+        generic:{t:'Generic carrier fallback',c:'warn'},
+        extension:{t:'Internal extension',c:'neutral'},
+        anonymous:{t:'Withheld / anonymous',c:'fail'},
+        none:{t:'No name (number only)',c:'warn'}};
+      const ct=CIDTYPE[cid.cnamType]||CIDTYPE.none;
+      const cidPanel = `
+        <div class="vcid">
+          <div class="vcid-main">
+            <span class="cid-name">${cid.name?escapeHtml(cid.name):'<span class=\'faint\'>No caller name</span>'}</span>
+            <span class="cid-num">${escapeHtml(cid.number||p.caller.num||'?')}</span>
+            <span class="cid-badge ${ct.c}">${ct.t}</span>
+            ${cid.anon?'<span class="cid-badge fail">🔒 Private</span>':''}
+            ${cid.conflict?'<span class="cid-badge fail">⚠ name mismatch</span>':''}
+          </div>
+          <div class="vcid-note">${escapeHtml(cid.typeNote||'')}</div>
+          <div class="vcid-meta">
+            ${cid.source?`<span><b>Name source:</b> ${escapeHtml(cid.source)}</span>`:''}
+            ${cid.sources&&cid.sources.pai?`<span><b>P-Asserted-Id:</b> ${escapeHtml(cid.sources.pai)}</span>`:''}
+            ${cid.oli?`<span><b>Line type (OLI ${cid.oli.code}):</b> ${escapeHtml(cid.oli.label)}</span>`:''}
+            ${cid.privacy?`<span><b>Privacy:</b> ${escapeHtml(cid.privacy)}</span>`:''}
+            ${cid.screen?`<span><b>Screen:</b> ${escapeHtml(cid.screen)}</span>`:''}
+          </div>
+        </div>`;
+      const INITICON={carrier:'🛰️',trunk:'🛰️',pbx:'🖧',endpoint:'☎️',internal:'🔌',external:'🌐'};
+      const qosPanel = buildQosPanel(p);
+      const initPanel = init.label? `
+        <div class="vinit">
+          <span class="vinit-ico">${INITICON[init.kind]||'🔌'}</span>
+          <span class="vinit-k">Initiator</span>
+          <span class="vinit-label">${escapeHtml(initName||init.label)}</span>
+        </div>` : '';
       const cdevice = (p.uad||p.mac)? `
         <div class="vdevice">
           <div class="df"><div class="dl">Vendor</div><div class="dv">${cu.vendor?escapeHtml(cu.vendor):'<span class=\'faint\'>unknown</span>'}</div></div>
@@ -2121,7 +2821,10 @@ const PSA = (function(){
         <div class="vheadline">${escapeHtml(c.eli5.headline)}</div>
         <div class="vstory">${story}</div>
         ${recs}
+        ${initPanel}
+        ${cidPanel}
         ${cdevice}
+        ${qosPanel}
         ${croute}
         <div class="vmeaning"><b>${icon} ${status}</b><span>${p.redirected? STATUS_MEANING['call-redir'] : STATUS_MEANING[p.ocls==='ok'?(p.outcome==='completed'?'call-done':'call-live'):p.ocls==='unreg'?'call-cxl':'call-fail']}</span></div>
         ${tech}`;
@@ -2157,10 +2860,13 @@ const PSA = (function(){
         </div>
         <div class="grid">
           <div class="lab">Outcome</div><div class="val">${escapeHtml(pr.outcome)}${pr.translated?` <span class="faint">(caller saw ${pr.translated.code})</span>`:''}</div>
+          ${pr.initiator?`<div class="lab">Initiator device</div><div class="val">${escapeHtml(pr.initiator.label)} <span class="faint">${escapeHtml(pr.initiator.ip)}${pr.initiator.priv?' (private)':''}</span></div>`:''}
+          ${pr.cid&&(pr.cid.name||pr.cid.number)?`<div class="lab">Caller ID</div><div class="val">${pr.cid.name?escapeHtml(pr.cid.name)+' ':''}<span class="faint">${escapeHtml(pr.cid.number||'')}</span>${pr.cid.cnamType&&pr.cid.cnamType!=='subscriber'&&pr.cid.cnamType!=='extension'?` <span class="faint">(${escapeHtml(pr.cid.cnamType)})</span>`:''}${pr.cid.oli?` · <span class="faint">${escapeHtml(pr.cid.oli.label)}</span>`:''}</div>`:''}
           ${pr.redirectTo?`<div class="lab">Forwarded to</div><div class="val">${escapeHtml(pr.redirectTo)}${pr.divertReason?` <span class="faint">(${pr.divertReason})</span>`:''}</div>`:''}
           ${pr.answerMs!==null?`<div class="lab">Answered in</div><div class="val">${(pr.answerMs/1000).toFixed(2)} s${pr.hadRinging?'':' <span class="faint">(no ringing phase)</span>'}</div>`:''}
           ${pr.durationS!==null?`<div class="lab">Talk time</div><div class="val">${pr.durationS.toFixed(1)} s — ${pr.hangupBy} hung up</div>`:''}
           ${pr.codecsOffered.length?`<div class="lab">Codecs offered</div><div class="val">${pr.codecsOffered.join(', ')}</div>`:''}
+          ${MEDIA_QOS&&MEDIA_QOS.ok?`<div class="lab">MOS (measured)</div><div class="val">min ${MEDIA_QOS.overallMin!=null?MEDIA_QOS.overallMin.toFixed(2):'—'} · avg ${MEDIA_QOS.overallAvg!=null?MEDIA_QOS.overallAvg.toFixed(2):'—'} <span class="faint">— from pasted Media Summary${MEDIA_QOS.blame?' · '+escapeHtml(MEDIA_QOS.blame.direction)+' degraded':''}</span></div>`:(pr.qosMeasured?`<div class="lab">MOS (measured)</div><div class="val">min ${pr.qosMeasured.min.toFixed(1)} · avg ${pr.qosMeasured.avg.toFixed(1)} <span class="faint">— from RTP · loss ${pr.qosMeasured.lossPct.toFixed(1)}% · jitter ${pr.qosMeasured.jitterMs.toFixed(1)}ms</span></div>`:(pr.qos&&pr.qos.ceiling!=null?`<div class="lab">MOS (est.)</div><div class="val">min ${pr.qos.min.toFixed(1)} · avg ${pr.qos.avg.toFixed(1)} <span class="faint">— codec ceiling, not measured (no RTP)</span></div>`:''))}
           ${pr.mediaAnswer?`<div class="lab">Media (answer)</div><div class="val">${pr.mediaAnswer.ip}:${pr.mediaAnswer.port} <span class="faint">(RTP not in this file)</span></div>`:''}
           <div class="lab">Legs</div><div class="val">${c.legs.map(l=>`${PSA.short(l.callId)} <span class="faint">(${l.isOriginLeg?'origin':'internal'})</span>`).join('<br>')}</div>
         </div>`;
@@ -2202,6 +2908,7 @@ const PSA = (function(){
     ['ladder','Call flow',null],
     ['reg','Registrations','regGroups'],
     ['calls','Calls','calls'],
+    ['qos','Media QoS',null],
     ['msgs','Messages','sipTotal'],
     ['ep','Endpoints','endpoints'],
     ['warn','Warnings','warnings'],
@@ -2225,6 +2932,133 @@ const PSA = (function(){
     document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===id));
     document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
     $('#p-'+id).classList.add('active');
+  }
+
+  /* ---- Media QoS (paste an Operations Monitor Media Summary) ---- */
+  function wireMediaQoS(){
+    window.__gotoQos = ()=>{ setTab('qos'); const el=$('#msInput'); if(el) el.scrollIntoView({behavior:'smooth',block:'center'}); };
+    const inp=$('#msInput'), out=$('#msResult');
+    if(!inp) return;
+    const run=()=>{
+      const txt=inp.value.trim();
+      if(!txt){ out.innerHTML='<div class="qos-empty">Paste a Media Summary above, then click Analyze.</div>'; return; }
+      let r; try{ r=PSA.parseMediaSummary(txt); }catch(e){ out.innerHTML='<div class="qos-empty err">Could not parse that — check it\'s an Operations Monitor Media Summary.</div>'; return; }
+      if(!r.ok || !r.legs.length){ out.innerHTML='<div class="qos-empty err">No media streams with MOS/loss data found in that text.</div>'; return; }
+      MEDIA_QOS = r;                 // becomes source of truth for dashboard QoS
+      out.innerHTML=renderMediaSummary(r);
+      if(MODEL){ renderCallVerdicts(MODEL); renderCalls(MODEL); }   // refresh dashboard + calls tab to match
+    };
+    $('#msAnalyze').onclick=run;
+    $('#msClear').onclick=()=>{ inp.value=''; out.innerHTML=''; MEDIA_QOS=null; if(MODEL){ renderCallVerdicts(MODEL); renderCalls(MODEL); } inp.focus(); };
+  }
+  const mosBandQ=(v)=> v==null?'na': v>=4.0?'ok': v>=3.6?'warn': v>=3.1?'warn':'fail';
+  const mosWordQ=(v)=> v==null?'—': v>=4.3?'Excellent': v>=4.0?'Good': v>=3.6?'Fair': v>=3.1?'Poor':'Bad';
+  // Technical recommendations from the media summary analysis
+  function renderMediaRecs(r){
+    const H=escapeHtml;
+    const recs=[]; // {own, icon, simple, detail}
+    const OWN={network:'Network',carrier:'Carrier/SBC',endpoint:'Endpoint',ok:'Status',monitor:'Validation',config:'Config'};
+    if(!r.blame){
+      recs.push({own:'ok', icon:'✅',
+        simple:`Audio quality is good in every direction — no action needed.`,
+        detail:`All measured directions are within target: average MOS ${r.overallAvg!=null?r.overallAvg.toFixed(2):'—'}, minimum MOS ${r.overallMin!=null?r.overallMin.toFixed(2):'—'}, packet loss ≤1%, jitter within de-jitter buffer tolerance. No media-plane remediation indicated.`});
+      recs.push({own:'monitor', icon:'📌',
+        simple:`Save this Media Summary as your known-good baseline.`,
+        detail:`Attach it to the ticket / KB article. If quality is later reported on this path, diff loss / jitter / R-factor per SSRC against this reference to isolate the regression and confirm whether it's a new fault or expected behavior.`});
+    } else {
+      const b=r.blame;
+      const heavyLoss=(b.loss||0)>5, someLoss=(b.loss||0)>1&&!heavyLoss, highJit=(b.jitterAvg||0)>30;
+      recs.push({own:'network', icon:'🎯',
+        simple:`The problem is one-way: only <b>${H(b.direction)}</b> is degraded. Focus there.`,
+        detail:`Impairment is unidirectional on the <b>${H(b.direction)}</b> RTP stream${b.mosMin!=null?` (MOS min ${b.mosMin.toFixed(2)}, R-factor-driven)`:''}. ${b.oneWay?`The reverse SSRC is clean, so this is a one-way media fault — degradation is only heard by the endpoint receiving on this 5-tuple. RTP is independently routed per direction, so troubleshoot this path in isolation; the clean reverse direction rules out both endpoints' fundamental capability.`:`Both directions show impairment; treat as a shared-path fault (common upstream link, SBC, or WAN segment).`}`});
+      if(heavyLoss){
+        recs.push({own:'network', icon:'📉',
+          simple:`Heavy packet loss (${b.loss.toFixed(1)}%) toward <b>${H(b.dst)}</b> — check that path for congestion or a bad link.`,
+          detail:`Packet loss ${b.loss.toFixed(2)}% is well above the ~1% ceiling for toll-quality G.711; at this rate PLC (packet-loss concealment) cannot mask the gaps. Inspect the egress path toward the receiver for: interface errors/discards (CRC, input/output drops), a saturated WAN/uplink, a flapping or half-duplex link, or a policer/shaper clipping the voice queue. Pull interface counters and queue-drop statistics across the hop set and correlate with the call's timeframe.`});
+      } else if(someLoss){
+        recs.push({own:'network', icon:'📉',
+          simple:`Some packet loss (${b.loss.toFixed(1)}%) toward <b>${H(b.dst)}</b> — audible on G.711; look for brief congestion.`,
+          detail:`Loss ${b.loss.toFixed(2)}% is low but audible on G.711 (no redundancy/FEC). Check for microbursts on the egress queue, transient uplink saturation, Wi-Fi retransmit/roam in the path, or a WRED/policer trimming EF-marked traffic. Correlate loss timestamps with interface utilization graphs to catch short spikes.`});
+      }
+      if(highJit){
+        recs.push({own:'network', icon:'📶',
+          simple:`High jitter (${b.jitterAvg.toFixed(1)} ms) toward <b>${H(b.dst)}</b> — enforce voice QoS on that path.`,
+          detail:`Jitter avg ${b.jitterAvg.toFixed(2)} ms exceeds typical adaptive de-jitter buffer depth (~20–50 ms); late-arriving packets are discarded as effective loss. Root causes: queue congestion/bufferbloat, variable-latency paths, or LAG/ECMP packet reordering. Enforce DSCP EF end-to-end with priority queuing (LLQ) and verify markings aren't reset at trust boundaries.`});
+      }
+      recs.push({own:'network', icon:'🧵',
+        simple:`Walk the path <b>${H(b.src)}</b> → <b>${H(b.dst)}</b> hop by hop.`,
+        detail:`Fault-domain walk on the degraded direction: sender <b>${H(b.src)}</b> NIC/UA → access switch egress → distribution/WAN or inter-VLAN segment${r.legs&&r.legs.some(l=>l.vlan)?' (check the tagged VLAN trunk)':''} → receiver <b>${H(b.dst)}</b> ingress. The clean reverse SSRC exonerates the return path and the far endpoint's transmit side, so the defect is on this egress path.`});
+      recs.push({own:'config', icon:'🛠️',
+        simple:`Confirm voice QoS marking is intact and no ALG/transcoding is interfering.`,
+        detail:`Verify media-plane QoS classification/marking is preserved across every hop on this leg (DSCP 46/EF intact, voice in the priority queue, adequate LLQ bandwidth). Confirm no SIP ALG, SBC transcoding, or media anchoring is introducing the loss/jitter on this segment.`});
+      recs.push({own:'carrier', icon:'📇',
+        simple:`If the path is carrier/SBC-side, escalate with the leg details and Call-ID.`,
+        detail:`Escalate to the carrier with: impaired direction (${H(b.direction)}), the 5-tuple/SSRC, loss ${b.loss!=null?b.loss.toFixed(2)+'%':'—'}, jitter ${b.jitterAvg!=null?b.jitterAvg.toFixed(2)+' ms':'—'}, R-factor ${r.worst&&r.worst.rfactor!=null?r.worst.rfactor.toFixed(1):'—'}${r.worst&&r.worst.callId?`, SIP Call-ID ${H(r.worst.callId)}`:''}. This scopes the issue directly to their media path and avoids back-and-forth.`});
+      recs.push({own:'monitor', icon:'🔁',
+        simple:`After fixing, re-test and paste the new Media Summary here to confirm.`,
+        detail:`Post-change validation: place a controlled test call over the same path, re-export the Media Summary, and re-import it here. Acceptance criteria: loss ≤1%, jitter within buffer tolerance, and MOS ≥4.0 on the previously-impaired SSRC.`});
+    }
+    let h=`<div class="qos-recs"><div class="qos-recs-h">🛠️ Recommendations <span class="qos-recs-sub">simple action · click a row for the technical detail</span></div>`;
+    recs.forEach(x=>{
+      h+=`<details class="qos-rec"><summary><span class="qos-rec-ico">${x.icon}</span><span class="qos-rec-own">${OWN[x.own]||''}</span><span class="qos-rec-tx">${x.simple}</span><span class="qos-rec-caret">▸</span></summary><div class="qos-rec-detail">${x.detail}</div></details>`;
+    });
+    h+=`</div>`;
+    return h;
+  }
+
+  function renderMediaSummary(r){
+    const H=escapeHtml;
+    // overall scorecard
+    let html=`<div class="qos-card">
+      <div class="qos-scoreline">
+        <div class="mos big"><div class="mos-l">Average MOS</div><div class="mos-v ${mosBandQ(r.overallAvg)}">${r.overallAvg!=null?r.overallAvg.toFixed(2):'—'}</div><div class="mos-w">${mosWordQ(r.overallAvg)}</div></div>
+        <div class="mos big"><div class="mos-l">Minimum MOS</div><div class="mos-v ${mosBandQ(r.overallMin)}">${r.overallMin!=null?r.overallMin.toFixed(2):'—'}</div><div class="mos-w">${mosWordQ(r.overallMin)}</div></div>
+        <div class="qos-src">measured · Operations Monitor probes</div>
+      </div>`;
+    // blame banner
+    if(r.blame){
+      const b=r.blame;
+      const heavyLoss=(b.loss||0)>5, someLoss=(b.loss||0)>1&&!heavyLoss, highJit=(b.jitterAvg||0)>30;
+      const detailBits=[];
+      detailBits.push(`Impairment is on the <b>${H(b.direction)}</b> RTP stream${b.mosMin!=null?` (worst MOS ${b.mosMin.toFixed(2)}${r.worst&&r.worst.rfactor!=null?`, R-factor ${r.worst.rfactor.toFixed(1)}`:''})`:''}${b.loss!=null?`, loss ${b.loss.toFixed(2)}%`:''}${b.jitterAvg!=null?`, jitter ${b.jitterAvg.toFixed(2)} ms`:''}.`);
+      if(b.oneWay) detailBits.push(`The reverse SSRC is clean, so this is a <b>one-way</b> media fault — audio degrades only for the endpoint <b>receiving</b> on this 5-tuple. RTP is routed independently per direction, so the defect lives on the path toward <b>${H(b.dst)}</b> and the return path is exonerated.`);
+      if(heavyLoss) detailBits.push(`At ${b.loss.toFixed(2)}% loss (well above the ~1% G.711 ceiling), PLC can't conceal the gaps — points to congestion, interface errors/discards, a flapping/half-duplex link, or a policer/shaper clipping the voice queue on that egress path.`);
+      else if(someLoss) detailBits.push(`${b.loss.toFixed(2)}% loss is low but audible on G.711 (no FEC) — look for egress microbursts, transient uplink saturation, or Wi-Fi in the path.`);
+      if(highJit) detailBits.push(`Jitter ${b.jitterAvg.toFixed(2)} ms exceeds typical de-jitter buffer depth; late packets are discarded as effective loss — congestion/bufferbloat or path reordering.`);
+      html+=`<div class="qos-blame ${b.grade}">
+        <div class="qos-blame-h">${b.grade==='fail'?'⛔':'⚠️'} Quality problem on one leg${b.oneWay?' (one-way)':''}</div>
+        <div class="qos-blame-b">The <b>${H(b.direction)}</b> direction is the cause — ${H(b.reasons.join(', ')||'degraded quality')}${b.mosMin!=null?`, dropping MOS to <b>${b.mosMin.toFixed(2)}</b> at worst`:''}.${b.oneWay?` Only the party <b>receiving</b> on this leg hears it.`:''}</div>
+        <details class="qos-blame-more">
+          <summary>Technical detail <span class="qos-blame-caret">▸</span></summary>
+          <div class="qos-blame-detail">${detailBits.join(' ')}</div>
+        </details>
+      </div>`;
+    } else {
+      html+=`<div class="qos-blame ok"><div class="qos-blame-h">✓ All legs healthy</div><div class="qos-blame-b">Every measured direction is within good MOS/loss/jitter thresholds.</div></div>`;
+    }
+    // ELI5 recommendations — what to do next
+    html+=renderMediaRecs(r);
+    // per-leg table
+    html+=`<div class="qos-legs">`;
+    r.legs.forEach(l=>{
+      const isWorst = r.worst && l===r.worst && l.grade!=='ok';
+      html+=`<div class="qos-leg ${l.grade}${isWorst?' worst':''}">
+        <div class="qos-leg-dir">${l.direction?H(l.direction)+' · ':''}<b>${H(l.srcName||l.src)}</b> <span class="faint">${H(l.src)}:${H(l.sport)}</span> → <b>${H(l.dstName||l.dst)}</b> <span class="faint">${H(l.dst)}:${H(l.dport)}</span>${l.vlan?` <span class="qos-vlan">VLAN ${H(l.vlan)}</span>`:''}${isWorst?' <span class="qos-worst-tag">worst leg</span>':''}</div>
+        <div class="qos-leg-stats">
+          <span class="qs"><span class="qs-l">MOS avg</span><span class="qs-v ${mosBandQ(l.mosAvg)}">${l.mosAvg!=null?l.mosAvg.toFixed(2):'—'}</span></span>
+          <span class="qs"><span class="qs-l">MOS min</span><span class="qs-v ${mosBandQ(l.mosMin)}">${l.mosMin!=null?l.mosMin.toFixed(2):'—'}</span></span>
+          <span class="qs"><span class="qs-l">Loss</span><span class="qs-v ${(l.loss||0)>5?'fail':(l.loss||0)>1?'warn':'ok'}">${l.loss!=null?l.loss.toFixed(2)+'%':'—'}</span></span>
+          <span class="qs"><span class="qs-l">Jitter avg</span><span class="qs-v ${(l.jitterAvg||0)>30?'warn':'ok'}">${l.jitterAvg!=null?l.jitterAvg.toFixed(2)+' ms':'—'}</span></span>
+          <span class="qs"><span class="qs-l">Jitter max</span><span class="qs-v">${l.jitterMax!=null?l.jitterMax.toFixed(2)+' ms':'—'}</span></span>
+          <span class="qs"><span class="qs-l">Pkts recv</span><span class="qs-v">${l.pktRecv!=null?l.pktRecv.toLocaleString():'—'}</span></span>
+          <span class="qs"><span class="qs-l">Pkts lost</span><span class="qs-v ${(l.pktLost||0)>0?'warn':'ok'}">${l.pktLost!=null?l.pktLost.toLocaleString():'—'}</span></span>
+          ${l.rfactor!=null?`<span class="qs"><span class="qs-l">R-factor</span><span class="qs-v">${l.rfactor.toFixed(1)}</span></span>`:''}
+        </div>
+        <div class="qos-leg-meta">${l.codec?'Codec '+H(l.codec)+' · ':''}${l.reporter?'Reporter '+H(l.reporter):''}${l.callId?' · Call-ID '+H(l.callId):''}</div>
+      </div>`;
+    });
+    html+=`</div></div>`;
+    return html;
   }
 
   /* ---- Ladder (SVG) ---- */
@@ -2501,16 +3335,19 @@ const PSA = (function(){
       s+=`\n`;
     }
     if(m.calls && m.calls.length){
-      s+=`h3. Calls\n||From||To||Outcome||Answered in||Talk time||Hung up by||Codec||Legs||\n`;
-      m.calls.forEach(c=>{ const p=c.primary;
-        s+=`|${p.caller.num||'?'}|${p.callee.num||'?'}|${p.outcome} ${p.code?('('+p.code+')'):''}|${p.answerMs!=null?(p.answerMs/1000).toFixed(2)+'s':'-'}|${p.durationS!=null?p.durationS.toFixed(1)+'s':'-'}|${p.hangupBy||'-'}|${p.codec||'-'}|${c.legs.length}|\n`;
+      s+=`h3. Calls\n||Initiator||Caller ID||From||To||Outcome||Answered in||Talk time||Hung up by||Codec||Min MOS (est)||Avg MOS (est)||Legs||\n`;
+      m.calls.forEach(c=>{ const p=c.primary; const cid=p.cid||{}; const ini=p.initiator||{}; const q=p.qos||{}; const qm=p.qosMeasured;
+        const cidCol=(cid.name?cid.name+' ':'')+(cid.cnamType&&cid.cnamType!=='subscriber'?'('+cid.cnamType+')':'')||'-';
+        const minMos = qm? qm.min.toFixed(1)+' (RTP)' : (q.ceiling!=null?q.min.toFixed(1)+' (est)':'-');
+        const avgMos = qm? qm.avg.toFixed(1)+' (RTP)' : (q.ceiling!=null?q.avg.toFixed(1)+' (est)':'-');
+        s+=`|${ini.label?ini.label+' '+(ini.ip||''):'-'}|${cidCol||'-'}|${p.caller.num||'?'}|${p.callee.num||'?'}|${p.outcome} ${p.code?('('+p.code+')'):''}|${p.answerMs!=null?(p.answerMs/1000).toFixed(2)+'s':'-'}|${p.durationS!=null?p.durationS.toFixed(1)+'s':'-'}|${p.hangupBy||'-'}|${p.codec||'-'}|${minMos}|${avgMos}|${c.legs.length}|\n`;
       });
       m.calls.forEach(c=>{
         s+=`\n*${c.primary.caller.num||'?'} → ${c.primary.callee.num||'?'}:* ${c.eli5.headline}\n`;
         c.eli5.story.forEach(x=> s+=`* ${x}\n`);
         c.eli5.recs.forEach(r=> s+=`* _[${r.own}]_ ${r.text}\n`);
       });
-      s+=`\n`;
+      s+=`\n{note}*MOS is estimated* from the negotiated codec's best-case ceiling on a clean network — it is *not measured*. These captures contain SIP signaling only (no RTP), so real packet loss, jitter, and latency are unknown and actual MOS may be lower. For true measured MOS, capture the RTP media path or enable RTCP-XR.{note}\n`;
     }
     s+=`h3. Sign-in attempts\n||AOR||Vendor||Model||Firmware||MAC||Source||Registrar||Platform||Transport||Type||Result||Attempts||Latency||NAT||\n`;
     m.regGroups.forEach(g=>{ const r=g.rep; const ht=classifyHost(r.registrarHost); const u=r.uad||{};
